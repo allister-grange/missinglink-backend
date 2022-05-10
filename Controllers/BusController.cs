@@ -38,7 +38,7 @@ namespace missinglink.Controllers
       return buses;
     }
 
-    [HttpGet("statstics")]
+    [HttpGet("statistics")]
     public async Task<IEnumerable<BusStatistic>> GetBusStatistics(string? startDate, string? endDate)
     {
 
