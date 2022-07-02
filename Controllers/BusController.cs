@@ -155,8 +155,8 @@ namespace missinglink.Controllers
         var alert = entity.alert.header_text.translation[0].text;
         var routeShortName = routes.Find(route => route.RouteId == entity.alert.informed_entity[0].route_id);
 
-        if(routeShortName == null) {
-        
+        if(routeShortName == null || alert == null) {
+          return;
         }
 
         if (alert.Contains("cancel") && routeShortName.RouteShortName != null)
