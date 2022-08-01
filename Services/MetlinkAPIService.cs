@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using missinglink.Models;
 using missinglink.Models.VehiclePositions;
+using Microsoft.Extensions.Configuration;
 
 namespace missinglink.Services
 {
@@ -14,10 +15,13 @@ namespace missinglink.Services
   {
 
     private readonly HttpClient _httpClient;
+    private readonly IConfiguration _configuration;
 
-    public MetlinkAPIServices(IHttpClientFactory clientFactory)
+
+    public MetlinkAPIServices(IHttpClientFactory clientFactory, IConfiguration configuration)
     {
       _httpClient = clientFactory.CreateClient("metlinkService");
+      _configuration = configuration;
     }
     public async Task<IEnumerable<Bus>> GetBusesFromStopId(string stopId)
     {
@@ -143,7 +147,7 @@ namespace missinglink.Services
         var request = new HttpRequestMessage(
           HttpMethod.Get, url);
         request.Headers.Add("Accept", "application/json");
-        request.Headers.Add("x-api-key", "getYaOwnApiKeyBrothar");
+        request.Headers.Add("x-api-key", _configuration.GetConnectionString("MetlinkAPIKey"));
         var response = await _httpClient.SendAsync(request);
 
         if(response.IsSuccessStatusCode) {
