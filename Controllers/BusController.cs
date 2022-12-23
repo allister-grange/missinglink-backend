@@ -119,7 +119,7 @@ namespace missinglink.Controllers
 
       allBuses.ForEach(bus =>
       {
-        var tripThatBusIsOn = trips.Find(trip => trip.TripId == Int16.Parse(bus.TripId));
+        var tripThatBusIsOn = trips.Find(trip => trip.TripId == bus.TripId);
         var positionForBus = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == bus.VehicleId);
 
         if (tripThatBusIsOn == null)
@@ -154,6 +154,12 @@ namespace missinglink.Controllers
       serviceAlert.entity.ForEach(entity =>
       {
         var alert = entity.alert.header_text.translation[0].text;
+
+        if (entity.alert.informed_entity.Count == 0)
+        {
+          return;
+        }
+
         var routeShortName = routes.Find(route => route.RouteId == entity.alert.informed_entity[0].route_id);
 
         if (routeShortName == null || alert == null)

@@ -7,13 +7,13 @@ namespace missinglink.Models
   public class TripDTO
   {
     [JsonPropertyName("route_id")]
-    public int RouteId { get; set; }
+    public string RouteId { get; set; }
 
     [JsonPropertyName("service_id")]
-    public int ServiceId { get; set; }
+    public string ServiceId { get; set; }
 
     [JsonPropertyName("trip_id")]
-    public int TripId { get; set; }
+    public string TripId { get; set; }
 
     [JsonPropertyName("trip_headsign")]
     public string TripHeadsign { get; set; }
@@ -22,10 +22,10 @@ namespace missinglink.Models
     public int DirectionId { get; set; }
 
     [JsonPropertyName("block_id")]
-    public int BlockId { get; set; }
+    public string BlockId { get; set; }
 
     [JsonPropertyName("shape_id")]
-    public int ShapeId { get; set; }
+    public string ShapeId { get; set; }
 
     [JsonPropertyName("wheelchair_accessible")]
     public int WheelchairAccessible { get; set; }

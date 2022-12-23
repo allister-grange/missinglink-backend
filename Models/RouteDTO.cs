@@ -7,10 +7,10 @@ public class RouteDTO
   public int Id { get; set; }
 
   [JsonPropertyName("route_id")]
-  public int RouteId { get; set; }
+  public string RouteId { get; set; }
 
   [JsonPropertyName("agency_id")]
-  public int AgencyId { get; set; }
+  public string AgencyId { get; set; }
 
   [JsonPropertyName("route_short_name")]
   public string RouteShortName { get; set; }

@@ -24,13 +24,13 @@ namespace missinglink.Models.VehiclePositions
     public string StartTime { get; set; }
 
     [JsonPropertyName("trip_id")]
-    public int TripId { get; set; }
+    public string TripId { get; set; }
 
     [JsonPropertyName("direction_id")]
     public int DirectionId { get; set; }
 
     [JsonPropertyName("route_id")]
-    public int RouteId { get; set; }
+    public string RouteId { get; set; }
 
     [JsonPropertyName("schedule_relationship")]
     public int ScheduleRelationship { get; set; }
@@ -43,7 +43,7 @@ namespace missinglink.Models.VehiclePositions
   public class Position
   {
     [JsonPropertyName("bearing")]
-    public int Bearing { get; set; }
+    public double Bearing { get; set; }
 
     [JsonPropertyName("latitude")]
     public double Latitude { get; set; }
@@ -82,7 +82,7 @@ namespace missinglink.Models.VehiclePositions
   public class VehiclePositionHolder
   {
     [JsonPropertyName("id")]
-    public int Id { get; set; }
+    public string Id { get; set; }
 
     [JsonPropertyName("vehicle")]
     public VehiclePosition VehiclePosition { get; set; }

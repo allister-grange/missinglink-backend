@@ -42,15 +42,15 @@ public class HeaderText
 [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
 public class ServiceAlertTrip
 {
-  public int trip_id { get; set; }
+  public string trip_id { get; set; }
 }
 
 [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
 public class InformedEntity
 {
-  public int route_id { get; set; }
-  public int route_type { get; set; }
-  public int stop_id { get; set; }
+  public string route_id { get; set; }
+  public string route_type { get; set; }
+  public string stop_id { get; set; }
   public ServiceAlertTrip trip { get; set; }
 }
 
