@@ -114,19 +114,20 @@ namespace missinglink.Controllers
       // short name and description to the bus with the matching "trip_id" from /trip_updates
       // tripUpdate (trip_id)
       // trip (route_id, trip_id)
+      // trip (route_id, trip_id)
       // routes (route_id)
 
       allBuses.ForEach(bus =>
       {
-        var tripThatBusIsOn = trips.Find(trip => trip.TripId == bus.TripId);
-        var positionForBus = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == bus.VehicleId);
+        var tripThatBusIsOn = trips.Find(trip => trip.TripId == Int16.Parse(bus.TripId));
+        var positionForBus = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == Int16.Parse(bus.VehicleId));
 
         if (tripThatBusIsOn == null)
         {
           _logger.LogWarning("No Trip found for bus " + bus.VehicleId);
           return;
         }
-        var routeThatBusIsOn = routes.Find(route => route.RouteId == tripThatBusIsOn.RouteId.ToString());
+        var routeThatBusIsOn = routes.Find(route => route.RouteId == tripThatBusIsOn.RouteId);
         if (routeThatBusIsOn != null)
         {
           bus.RouteId = routeThatBusIsOn.RouteId;
@@ -155,7 +156,8 @@ namespace missinglink.Controllers
         var alert = entity.alert.header_text.translation[0].text;
         var routeShortName = routes.Find(route => route.RouteId == entity.alert.informed_entity[0].route_id);
 
-        if(routeShortName == null || alert == null) {
+        if (routeShortName == null || alert == null)
+        {
           return;
         }
 

@@ -3,91 +3,98 @@ using System.Text.Json.Serialization;
 
 namespace missinglink.Models.VehiclePositions
 {
-    public class Header
-    {
-        [JsonPropertyName("gtfsRealtimeVersion")]
-        public string GtfsRealtimeVersion { get; set; }
 
-        [JsonPropertyName("incrementality")]
-        public int Incrementality { get; set; }
+  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+  public class Header
+  {
+    [JsonPropertyName("gtfsRealtimeVersion")]
+    public string GtfsRealtimeVersion { get; set; }
 
-        [JsonPropertyName("timestamp")]
-        public int Timestamp { get; set; }
-    }
+    [JsonPropertyName("incrementality")]
+    public int Incrementality { get; set; }
 
-    public class Trip
-    {
-        [JsonPropertyName("start_time")]
-        public string StartTime { get; set; }
+    [JsonPropertyName("timestamp")]
+    public int Timestamp { get; set; }
+  }
 
-        [JsonPropertyName("trip_id")]
-        public string TripId { get; set; }
+  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+  public class Trip
+  {
+    [JsonPropertyName("start_time")]
+    public string StartTime { get; set; }
 
-        [JsonPropertyName("direction_id")]
-        public int DirectionId { get; set; }
+    [JsonPropertyName("trip_id")]
+    public int TripId { get; set; }
 
-        [JsonPropertyName("route_id")]
-        public int RouteId { get; set; }
+    [JsonPropertyName("direction_id")]
+    public int DirectionId { get; set; }
 
-        [JsonPropertyName("schedule_relationship")]
-        public int ScheduleRelationship { get; set; }
+    [JsonPropertyName("route_id")]
+    public int RouteId { get; set; }
 
-        [JsonPropertyName("start_date")]
-        public string StartDate { get; set; }
-    }
+    [JsonPropertyName("schedule_relationship")]
+    public int ScheduleRelationship { get; set; }
 
-    public class Position
-    {
-        [JsonPropertyName("bearing")]
-        public int Bearing { get; set; }
+    [JsonPropertyName("start_date")]
+    public string StartDate { get; set; }
+  }
 
-        [JsonPropertyName("latitude")]
-        public double Latitude { get; set; }
+  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+  public class Position
+  {
+    [JsonPropertyName("bearing")]
+    public int Bearing { get; set; }
 
-        [JsonPropertyName("longitude")]
-        public double Longitude { get; set; }
-    }
+    [JsonPropertyName("latitude")]
+    public double Latitude { get; set; }
 
+    [JsonPropertyName("longitude")]
+    public double Longitude { get; set; }
+  }
+
+  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
   public class VehiclePostionId
   {
     [JsonPropertyName("id")]
-    public string Id  {get; set;}
+    public int Id { get; set; }
   }
 
-    public class VehiclePosition
-    {
-        // [JsonPropertyName("id")]
-        // public string Id { get; set; }
+  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+  public class VehiclePosition
+  {
+    // [JsonPropertyName("id")]
+    // public string Id { get; set; }
 
-        [JsonPropertyName("trip")]
-        public Trip Trip { get; set; }
+    [JsonPropertyName("trip")]
+    public Trip Trip { get; set; }
 
-        [JsonPropertyName("position")]
-        public Position Position { get; set; }
+    [JsonPropertyName("position")]
+    public Position Position { get; set; }
 
-        [JsonPropertyName("vehicle")]
-        public VehiclePostionId Vehicle { get; set; }
+    [JsonPropertyName("vehicle")]
+    public VehiclePostionId Vehicle { get; set; }
 
-        [JsonPropertyName("timestamp")]
-        public int Timestamp { get; set; }
-    }
+    [JsonPropertyName("timestamp")]
+    public int Timestamp { get; set; }
+  }
 
-    public class VehiclePositionHolder
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; }
+  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+  public class VehiclePositionHolder
+  {
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
 
-        [JsonPropertyName("vehicle")]
-        public VehiclePosition VehiclePosition { get; set; }
-    }
+    [JsonPropertyName("vehicle")]
+    public VehiclePosition VehiclePosition { get; set; }
+  }
 
-    public class VehiclePostionDTO
-    {
-        [JsonPropertyName("header")]
-        public Header Header { get; set; }
+  public class VehiclePostionDTO
+  {
+    [JsonPropertyName("header")]
+    public Header Header { get; set; }
 
-        [JsonPropertyName("entity")]
-        public List<VehiclePositionHolder> VehiclePositions { get; set; }
-    }
+    [JsonPropertyName("entity")]
+    public List<VehiclePositionHolder> VehiclePositions { get; set; }
+  }
 
 }

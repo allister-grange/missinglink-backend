@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 public class ServiceAlertDto
 {
@@ -38,16 +39,18 @@ public class HeaderText
   public List<Translation> translation { get; set; }
 }
 
+[JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
 public class ServiceAlertTrip
 {
-  public string trip_id { get; set; }
+  public int trip_id { get; set; }
 }
 
+[JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
 public class InformedEntity
 {
-  public string route_id { get; set; }
+  public int route_id { get; set; }
   public int route_type { get; set; }
-  public string stop_id { get; set; }
+  public int stop_id { get; set; }
   public ServiceAlertTrip trip { get; set; }
 }
 
