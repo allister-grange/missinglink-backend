@@ -56,7 +56,7 @@ namespace missinglink.Models.VehiclePositions
   public class VehiclePostionId
   {
     [JsonPropertyName("id")]
-    public int Id { get; set; }
+    public string Id { get; set; }
   }
 
   [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]

@@ -120,7 +120,7 @@ namespace missinglink.Controllers
       allBuses.ForEach(bus =>
       {
         var tripThatBusIsOn = trips.Find(trip => trip.TripId == Int16.Parse(bus.TripId));
-        var positionForBus = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == Int16.Parse(bus.VehicleId));
+        var positionForBus = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == bus.VehicleId);
 
         if (tripThatBusIsOn == null)
         {
