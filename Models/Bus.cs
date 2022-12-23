@@ -14,7 +14,7 @@ namespace missinglink.Models
 
     [JsonPropertyName("status")]
     public string Status { get; set; }
-    public int StopId { get; set; }
+    public string StopId { get; set; }
     public int Delay { get; set; }
     public int RouteId { get; set; }
     public string TripId { get; set; }

@@ -39,7 +39,7 @@ namespace missinglink.Models
     public Arrival Arrival { get; set; }
 
     [JsonPropertyName("stop_id")]
-    public int StopId { get; set; }
+    public string StopId { get; set; }
   }
 
   [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
@@ -83,7 +83,7 @@ namespace missinglink.Models
     public TripUpdate TripUpdate { get; set; }
 
     [JsonPropertyName("id")]
-    public int Id { get; set; }
+    public string Id { get; set; }
   }
 
   public class BusTripDTO
