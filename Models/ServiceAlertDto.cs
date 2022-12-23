@@ -42,14 +42,19 @@ public class HeaderText
 [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
 public class ServiceAlertTrip
 {
+
+  [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
   public string trip_id { get; set; }
 }
 
 [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
 public class InformedEntity
 {
+  [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
   public string route_id { get; set; }
   public string route_type { get; set; }
+
+  [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
   public string stop_id { get; set; }
   public ServiceAlertTrip trip { get; set; }
 }
@@ -74,6 +79,8 @@ public class Alert
 public class Entity
 {
   public Alert alert { get; set; }
+
+  [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
   public string id { get; set; }
 }
 

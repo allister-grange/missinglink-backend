@@ -7,12 +7,14 @@ namespace missinglink.Models
   public class TripDTO
   {
     [JsonPropertyName("route_id")]
+    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
     public string RouteId { get; set; }
 
     [JsonPropertyName("service_id")]
     public string ServiceId { get; set; }
 
     [JsonPropertyName("trip_id")]
+    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
     public string TripId { get; set; }
 
     [JsonPropertyName("trip_headsign")]

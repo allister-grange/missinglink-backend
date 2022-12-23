@@ -39,6 +39,7 @@ namespace missinglink.Models
     public Arrival Arrival { get; set; }
 
     [JsonPropertyName("stop_id")]
+    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
     public string StopId { get; set; }
   }
 
@@ -52,6 +53,7 @@ namespace missinglink.Models
     public string StartTime { get; set; }
 
     [JsonPropertyName("trip_id")]
+    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
     public string TripId { get; set; }
   }
 
@@ -59,6 +61,7 @@ namespace missinglink.Models
   public class Vehicle
   {
     [JsonPropertyName("id")]
+    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
     public string Id { get; set; }
   }
   public class TripUpdate

@@ -7,6 +7,7 @@ public class RouteDTO
   public int Id { get; set; }
 
   [JsonPropertyName("route_id")]
+  [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
   public string RouteId { get; set; }
 
   [JsonPropertyName("agency_id")]
