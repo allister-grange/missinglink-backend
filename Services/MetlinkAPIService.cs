@@ -30,8 +30,8 @@ namespace missinglink.Services
 
       if (response.IsSuccessStatusCode)
       {
-        using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = JsonConvert.DeserializeObject<BusRoute>(responseStream.ToString());
+        var responseStream = await response.Content.ReadAsStringAsync();
+        res = JsonConvert.DeserializeObject<BusRoute>(responseStream);
       }
       else
       {
@@ -48,8 +48,8 @@ namespace missinglink.Services
 
       if (response.IsSuccessStatusCode)
       {
-        using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = JsonConvert.DeserializeObject<ServiceAlertDto>(responseStream.ToString());
+        var responseStream = await response.Content.ReadAsStringAsync();
+        res = JsonConvert.DeserializeObject<ServiceAlertDto>(responseStream);
       }
       else
       {
@@ -66,8 +66,8 @@ namespace missinglink.Services
 
       if (response.IsSuccessStatusCode)
       {
-        using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = JsonConvert.DeserializeObject<BusTripDTO>(responseStream.ToString());
+        var responseStream = await response.Content.ReadAsStringAsync();
+        res = JsonConvert.DeserializeObject<BusTripDTO>(responseStream);
       }
       else
       {
@@ -84,8 +84,8 @@ namespace missinglink.Services
 
       if (response.IsSuccessStatusCode)
       {
-        using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = JsonConvert.DeserializeObject<VehiclePostionDTO>(responseStream.ToString());
+        var responseStream = await response.Content.ReadAsStringAsync();
+        res = JsonConvert.DeserializeObject<VehiclePostionDTO>(responseStream);
       }
       else
       {
@@ -110,8 +110,8 @@ namespace missinglink.Services
 
       if (response.IsSuccessStatusCode)
       {
-        using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = JsonConvert.DeserializeObject<List<TripDTO>>(responseStream.ToString());
+        var responseStream = await response.Content.ReadAsStringAsync();
+        res = JsonConvert.DeserializeObject<List<TripDTO>>(responseStream);
       }
       else
       {
@@ -128,8 +128,8 @@ namespace missinglink.Services
 
       if (response.IsSuccessStatusCode)
       {
-        using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = JsonConvert.DeserializeObject<List<RouteDTO>>(responseStream.ToString());
+        var responseStream = await response.Content.ReadAsStringAsync();
+        res = JsonConvert.DeserializeObject<List<RouteDTO>>(responseStream);
       }
       else
       {
