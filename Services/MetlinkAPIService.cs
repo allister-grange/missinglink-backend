@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using missinglink.Models;
 using missinglink.Models.VehiclePositions;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 
 namespace missinglink.Services
 {
@@ -31,7 +31,7 @@ namespace missinglink.Services
       if (response.IsSuccessStatusCode)
       {
         using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = await JsonSerializer.DeserializeAsync<BusRoute>(responseStream);
+        res = JsonConvert.DeserializeObject<BusRoute>(responseStream.ToString());
       }
       else
       {
@@ -49,7 +49,7 @@ namespace missinglink.Services
       if (response.IsSuccessStatusCode)
       {
         using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = await JsonSerializer.DeserializeAsync<ServiceAlertDto>(responseStream);
+        res = JsonConvert.DeserializeObject<ServiceAlertDto>(responseStream.ToString());
       }
       else
       {
@@ -67,7 +67,7 @@ namespace missinglink.Services
       if (response.IsSuccessStatusCode)
       {
         using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = await JsonSerializer.DeserializeAsync<BusTripDTO>(responseStream);
+        res = JsonConvert.DeserializeObject<BusTripDTO>(responseStream.ToString());
       }
       else
       {
@@ -85,7 +85,7 @@ namespace missinglink.Services
       if (response.IsSuccessStatusCode)
       {
         using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = await JsonSerializer.DeserializeAsync<VehiclePostionDTO>(responseStream);
+        res = JsonConvert.DeserializeObject<VehiclePostionDTO>(responseStream.ToString());
       }
       else
       {
@@ -111,7 +111,7 @@ namespace missinglink.Services
       if (response.IsSuccessStatusCode)
       {
         using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = await JsonSerializer.DeserializeAsync<List<TripDTO>>(responseStream);
+        res = JsonConvert.DeserializeObject<List<TripDTO>>(responseStream.ToString());
       }
       else
       {
@@ -129,7 +129,7 @@ namespace missinglink.Services
       if (response.IsSuccessStatusCode)
       {
         using var responseStream = await response.Content.ReadAsStreamAsync();
-        res = await JsonSerializer.DeserializeAsync<List<RouteDTO>>(responseStream);
+        res = JsonConvert.DeserializeObject<List<RouteDTO>>(responseStream.ToString());
       }
       else
       {
@@ -150,12 +150,13 @@ namespace missinglink.Services
         request.Headers.Add("x-api-key", _configuration.GetConnectionString("MetlinkAPIKey"));
         var response = await _httpClient.SendAsync(request);
 
-        if(response.IsSuccessStatusCode) {
+        if (response.IsSuccessStatusCode)
+        {
           Console.WriteLine("Success calling " + url);
           return response;
         }
         Console.WriteLine("Failed calling " + url);
-        attempts --;
+        attempts--;
       }
 
       throw new Exception("Couldn't get a 200 from Metlink's API");
