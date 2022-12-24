@@ -1,103 +1,93 @@
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace missinglink.Models.VehiclePositions
 {
 
-  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
   public class Header
   {
-    [JsonPropertyName("gtfsRealtimeVersion")]
+    [JsonProperty("gtfsRealtimeVersion")]
     public string GtfsRealtimeVersion { get; set; }
 
-    [JsonPropertyName("incrementality")]
+    [JsonProperty("incrementality")]
     public int Incrementality { get; set; }
 
-    [JsonPropertyName("timestamp")]
+    [JsonProperty("timestamp")]
     public int Timestamp { get; set; }
   }
 
-  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
   public class Trip
   {
-    [JsonPropertyName("start_time")]
+    [JsonProperty("start_time")]
     public string StartTime { get; set; }
 
-    [JsonPropertyName("trip_id")]
-    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    [JsonProperty("trip_id")]
     public string TripId { get; set; }
 
-    [JsonPropertyName("direction_id")]
+    [JsonProperty("direction_id")]
     public int DirectionId { get; set; }
 
-    [JsonPropertyName("route_id")]
-    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    [JsonProperty("route_id")]
     public string RouteId { get; set; }
 
-    [JsonPropertyName("schedule_relationship")]
+    [JsonProperty("schedule_relationship")]
     public int ScheduleRelationship { get; set; }
 
-    [JsonPropertyName("start_date")]
+    [JsonProperty("start_date")]
     public string StartDate { get; set; }
   }
 
-  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
   public class Position
   {
-    [JsonPropertyName("bearing")]
+    [JsonProperty("bearing")]
     public double Bearing { get; set; }
 
-    [JsonPropertyName("latitude")]
+    [JsonProperty("latitude")]
     public double Latitude { get; set; }
 
-    [JsonPropertyName("longitude")]
+    [JsonProperty("longitude")]
     public double Longitude { get; set; }
   }
 
-  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
   public class VehiclePostionId
   {
-    [JsonPropertyName("id")]
-    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    [JsonProperty("id")]
     public string Id { get; set; }
   }
 
-  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
   public class VehiclePosition
   {
-    // [JsonPropertyName("id")]
+    // [JsonProperty("id")]
     // public string Id { get; set; }
 
-    [JsonPropertyName("trip")]
+    [JsonProperty("trip")]
     public Trip Trip { get; set; }
 
-    [JsonPropertyName("position")]
+    [JsonProperty("position")]
     public Position Position { get; set; }
 
-    [JsonPropertyName("vehicle")]
+    [JsonProperty("vehicle")]
     public VehiclePostionId Vehicle { get; set; }
 
-    [JsonPropertyName("timestamp")]
+    [JsonProperty("timestamp")]
     public int Timestamp { get; set; }
   }
 
-  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
   public class VehiclePositionHolder
   {
-    [JsonPropertyName("id")]
-    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    [JsonProperty("id")]
     public string Id { get; set; }
 
-    [JsonPropertyName("vehicle")]
+    [JsonProperty("vehicle")]
     public VehiclePosition VehiclePosition { get; set; }
   }
 
   public class VehiclePostionDTO
   {
-    [JsonPropertyName("header")]
+    [JsonProperty("header")]
     public Header Header { get; set; }
 
-    [JsonPropertyName("entity")]
+    [JsonProperty("entity")]
     public List<VehiclePositionHolder> VehiclePositions { get; set; }
   }
 

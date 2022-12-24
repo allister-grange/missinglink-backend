@@ -1,41 +1,38 @@
-using System.Collections.Generic;
-using System.Text.Json.Serialization;
+
+using Newtonsoft.Json;
 
 namespace missinglink.Models
 {
-  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
   public class TripDTO
   {
-    [JsonPropertyName("route_id")]
-    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    [JsonProperty("route_id")]
     public string RouteId { get; set; }
 
-    [JsonPropertyName("service_id")]
+    [JsonProperty("service_id")]
     public string ServiceId { get; set; }
 
-    [JsonPropertyName("trip_id")]
-    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    [JsonProperty("trip_id")]
     public string TripId { get; set; }
 
-    [JsonPropertyName("trip_headsign")]
+    [JsonProperty("trip_headsign")]
     public string TripHeadsign { get; set; }
 
-    [JsonPropertyName("direction_id")]
+    [JsonProperty("direction_id")]
     public int DirectionId { get; set; }
 
-    [JsonPropertyName("block_id")]
+    [JsonProperty("block_id")]
     public string BlockId { get; set; }
 
-    [JsonPropertyName("shape_id")]
+    [JsonProperty("shape_id")]
     public string ShapeId { get; set; }
 
-    [JsonPropertyName("wheelchair_accessible")]
+    [JsonProperty("wheelchair_accessible")]
     public int WheelchairAccessible { get; set; }
 
-    [JsonPropertyName("bikes_allowed")]
+    [JsonProperty("bikes_allowed")]
     public int BikesAllowed { get; set; }
 
-    [JsonPropertyName("date")]
+    [JsonProperty("date")]
     public string Date { get; set; }
   }
 }

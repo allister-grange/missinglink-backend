@@ -1,37 +1,35 @@
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
-[JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
 public class RouteDTO
 {
-  [JsonPropertyName("id")]
+  [JsonProperty("id")]
   public int Id { get; set; }
 
-  [JsonPropertyName("route_id")]
-  [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+  [JsonProperty("route_id")]
   public string RouteId { get; set; }
 
-  [JsonPropertyName("agency_id")]
+  [JsonProperty("agency_id")]
   public string AgencyId { get; set; }
 
-  [JsonPropertyName("route_short_name")]
+  [JsonProperty("route_short_name")]
   public string RouteShortName { get; set; }
 
-  [JsonPropertyName("route_long_name")]
+  [JsonProperty("route_long_name")]
   public string RouteLongName { get; set; }
 
-  [JsonPropertyName("route_desc")]
+  [JsonProperty("route_desc")]
   public string RouteDesc { get; set; }
 
-  [JsonPropertyName("route_type")]
+  [JsonProperty("route_type")]
   public int RouteType { get; set; }
 
-  [JsonPropertyName("route_color")]
+  [JsonProperty("route_color")]
   public string RouteColor { get; set; }
 
-  [JsonPropertyName("route_text_color")]
+  [JsonProperty("route_text_color")]
   public string RouteTextColor { get; set; }
 
-  [JsonPropertyName("route_url")]
+  [JsonProperty("route_url")]
   public string RouteUrl { get; set; }
 }
 

@@ -1,18 +1,16 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace missinglink.Models
 {
-  [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
   public class Bus
   {
 
     [Key]
-    [JsonPropertyName("vehicle_id")]
+    [JsonProperty("vehicle_id")]
     public string VehicleId { get; set; }
 
-    [JsonPropertyName("status")]
+    [JsonProperty("status")]
     public string Status { get; set; }
     public string StopId { get; set; }
     public int Delay { get; set; }

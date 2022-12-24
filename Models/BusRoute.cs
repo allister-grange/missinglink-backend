@@ -1,11 +1,14 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
-namespace missinglink.Models {
-  public class BusRoute {
+namespace missinglink.Models
+{
+  public class BusRoute
+  {
 
-    [JsonPropertyName("departures")]
-    public IEnumerable<Bus> Departures {get; set;}
+    [JsonProperty("departures")]
+    public IEnumerable<Bus> Departures { get; set; }
   }
 
 }
