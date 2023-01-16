@@ -82,107 +82,18 @@ namespace missinglink.Controllers
     [HttpPost("updates")]
     public async Task<ActionResult> UpdateBusTrips()
     {
-
-      var tripUpdatesTask = _MetlinkAPIService.GetTripUpdates();
-      var tripsTask = _MetlinkAPIService.GetTrips();
-      var routesTask = _MetlinkAPIService.GetRoutes();
-      var positionsTask = _MetlinkAPIService.GetVehiclePositions();
-      var serviceAlertTask = _MetlinkAPIService.GetCancelledBusesFromMetlink();
-
-      await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask, serviceAlertTask);
-
-      var tripUpdates = await tripUpdatesTask;
-      var trips = await tripsTask;
-      var routes = await routesTask;
-      var positions = await positionsTask;
-      var serviceAlert = await serviceAlertTask;
-
-      var allBuses = new List<Bus>();
-
-      if (tripUpdates.Count > 0)
+      var allBuses = await _MetlinkAPIService.GetBusUpdates();
+      if (allBuses.Count > 0)
       {
-        _logger.LogInformation("Parsing buses from trip updates...");
-        allBuses = ParseBusesFromTripUpdates(tripUpdates);
-        _logger.LogInformation("Finished parsing bus trips");
+        UpdateDbWithNewBuses(allBuses);
+        return Ok();
       }
       else
       {
         return NotFound();
       }
-
-      // match the route_id from /trips to the route_id in /routes and then set the 
-      // short name and description to the bus with the matching "trip_id" from /trip_updates
-      // tripUpdate (trip_id)
-      // trip (route_id, trip_id)
-      // trip (route_id, trip_id)
-      // routes (route_id)
-
-      allBuses.ForEach(bus =>
-      {
-        var tripThatBusIsOn = trips.Find(trip => trip.TripId == bus.TripId);
-        var positionForBus = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == bus.VehicleId);
-
-        if (tripThatBusIsOn == null)
-        {
-          _logger.LogWarning("No Trip found for bus " + bus.VehicleId);
-          return;
-        }
-        var routeThatBusIsOn = routes.Find(route => route.RouteId == tripThatBusIsOn.RouteId);
-        if (routeThatBusIsOn != null)
-        {
-          bus.RouteId = routeThatBusIsOn.RouteId;
-          bus.RouteDescription = routeThatBusIsOn.RouteDesc;
-          bus.RouteShortName = routeThatBusIsOn.RouteShortName;
-          bus.RouteLongName = routeThatBusIsOn.RouteLongName;
-        }
-        else
-        {
-          _logger.LogError($"Route that the bus {bus.VehicleId} is on is null");
-        }
-        if (positionForBus != null)
-        {
-          bus.Bearing = positionForBus.VehiclePosition.Position.Bearing;
-          bus.Lat = positionForBus.VehiclePosition.Position.Latitude;
-          bus.Long = positionForBus.VehiclePosition.Position.Longitude;
-        }
-        else
-        {
-          _logger.LogError($"Position for bus {bus.VehicleId}");
-        }
-      });
-
-      serviceAlert.entity.ForEach(entity =>
-      {
-        var alert = entity.alert.header_text.translation[0].text;
-
-        if (entity.alert.informed_entity.Count == 0)
-        {
-          return;
-        }
-
-        var routeShortName = routes.Find(route => route.RouteId == entity.alert.informed_entity[0].route_id);
-
-        if (routeShortName == null || alert == null)
-        {
-          return;
-        }
-
-        if (alert.Contains("cancel") && routeShortName.RouteShortName != null)
-        {
-          allBuses.Add(new Bus()
-          {
-            Status = "CANCELLED",
-            RouteLongName = entity.alert.header_text.translation[0].text,
-            RouteShortName = routeShortName.RouteShortName,
-            VehicleId = System.Guid.NewGuid().ToString()
-          });
-        }
-      });
-
-      UpdateDbWithNewBuses(allBuses);
-
-      return Ok();
     }
+
 
     [HttpPost("statistics")]
     public async Task<ActionResult> UpdateBusStatistics()
@@ -213,52 +124,6 @@ namespace missinglink.Controllers
       await _BusContext.SaveChangesAsync();
       return Ok();
     }
-
-    private List<Bus> ParseBusesFromTripUpdates(List<TripUpdateHolder> trips)
-    {
-
-      List<Bus> allBuses = new List<Bus>();
-
-      trips.ToList().ForEach(trip =>
-      {
-
-        if (trip.TripUpdate.Trip.TripId.Contains("RAIL") || trip.TripUpdate.Trip.TripId.Contains("rail"))
-        {
-          return;
-        }
-
-        var bus = new Bus();
-
-        bus.VehicleId = trip.TripUpdate.Vehicle.Id;
-        int delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
-        if (delay > 120)
-        {
-          bus.Status = "LATE";
-        }
-        else if (delay < -90)
-        {
-          bus.Status = "EARLY";
-        }
-        else if (delay == 0)
-        {
-          bus.Status = "UNKNOWN";
-        }
-        else
-        {
-          bus.Status = "ONTIME";
-        }
-        bus.TripId = trip.TripUpdate.Trip.TripId;
-        bus.StopId = trip.TripUpdate.StopTimeUpdate.StopId;
-        bus.Delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
-        if (allBuses.Find(toFind => bus.VehicleId == toFind.VehicleId) == null)
-        {
-          allBuses.Add(bus);
-        }
-      });
-
-      return allBuses;
-    }
-
 
     // clears all buses from the db and starts again with the fresh data
     private void UpdateDbWithNewBuses(List<Bus> buses)

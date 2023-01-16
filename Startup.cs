@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -35,6 +36,10 @@ namespace missinglink
         options.UseNpgsql(Configuration.GetConnectionString("Postgres")));
 
       services.AddControllers();
+
+      services.AddSingleton<BusHub>();
+
+      services.AddSignalR();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -50,9 +55,10 @@ namespace missinglink
         app.UseSwagger();
         app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "missinglink v1"));
         app.UseCors(builder => builder
-          .AllowAnyOrigin()
+          .WithOrigins("http://localhost:3000")
           .AllowAnyMethod()
-          .AllowAnyHeader());
+          .AllowAnyHeader()
+          .AllowCredentials());
       }
       else
       {
@@ -61,10 +67,10 @@ namespace missinglink
                     "https://www.missinglink.allistergrange.com",
                     "https://www.missinglink.link", "https://missinglink.link")
                   .AllowAnyMethod()
-                  .AllowAnyHeader());
+                  .AllowAnyHeader()
+                  .AllowCredentials());
+        app.UseHttpsRedirection();
       }
-
-      app.UseHttpsRedirection();
 
       app.UseRouting();
 
@@ -73,8 +79,11 @@ namespace missinglink
       app.UseEndpoints(endpoints =>
       {
         endpoints.MapControllers();
+        endpoints.MapHub<BusHub>("/bushub", options =>
+        {
+          options.Transports = HttpTransportType.ServerSentEvents;
+        });
       });
-
     }
   }
 }
