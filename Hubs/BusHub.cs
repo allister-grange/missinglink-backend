@@ -32,6 +32,7 @@ public class BusHub : Hub
       var buses = await _MetlinkAPIService.GetBusUpdates();
 
       // ship them to the user
+      Console.WriteLine("Sending out bus updates of " + buses.Count + " buses to: " + connectionIds.Count + " client/s.");
       await base.Clients.All.SendAsync("BusUpdates", buses);
     }
   }
