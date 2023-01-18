@@ -18,6 +18,7 @@ public class BusHub : Hub
 
   private async void StartTimer()
   {
+    await SendBusesUpdate();
     var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(10));
     while (await periodicTimer.WaitForNextTickAsync())
     {
