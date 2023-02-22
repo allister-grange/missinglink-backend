@@ -98,7 +98,7 @@ namespace missinglink.Services
           return;
         }
 
-        if (alert.Contains("cancel") && routeShortName.RouteShortName != null)
+        if (alert.Contains("cancelled") && routeShortName.RouteShortName != null)
         {
           allBuses.Add(new Bus()
           {
