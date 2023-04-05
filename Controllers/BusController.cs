@@ -82,15 +82,22 @@ namespace missinglink.Controllers
     [HttpPost("updates")]
     public async Task<ActionResult> UpdateBusTrips()
     {
-      var allBuses = await _MetlinkAPIService.GetBusUpdates();
-      if (allBuses.Count > 0)
+      try
       {
-        UpdateDbWithNewBuses(allBuses);
-        return Ok();
+        var allBuses = await _MetlinkAPIService.GetBusUpdates();
+        if (allBuses.Count > 0)
+        {
+          UpdateDbWithNewBuses(allBuses);
+          return Ok();
+        }
+        else
+        {
+          return NotFound();
+        }
       }
-      else
+      catch
       {
-        return NotFound();
+        return Problem("Was unable to query Metlink's API");
       }
     }
 
