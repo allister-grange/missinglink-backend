@@ -3,16 +3,10 @@ using Newtonsoft.Json;
 
 namespace missinglink.Models
 {
-  public class Bus
+  public class Service
   {
-
-    [Key]
-    [JsonProperty("vehicle_id")]
     public string VehicleId { get; set; }
-
-    [JsonProperty("status")]
     public string Status { get; set; }
-    public string StopId { get; set; }
     public int Delay { get; set; }
     public string RouteId { get; set; }
     public string TripId { get; set; }

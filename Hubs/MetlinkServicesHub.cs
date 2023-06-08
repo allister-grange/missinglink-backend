@@ -5,12 +5,12 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using missinglink.Services;
 
-public class BusHub : Hub
+public class MetlinkServicesHub : Hub
 {
   private readonly MetlinkAPIServices _MetlinkAPIService;
   private readonly List<string> connectionIds = new List<string>();
 
-  public BusHub(MetlinkAPIServices MetlinkAPIService)
+  public MetlinkServicesHub(MetlinkAPIServices MetlinkAPIService)
   {
     _MetlinkAPIService = MetlinkAPIService;
     StartTimer();

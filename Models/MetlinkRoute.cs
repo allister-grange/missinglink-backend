@@ -3,11 +3,11 @@ using Newtonsoft.Json;
 
 namespace missinglink.Models
 {
-  public class BusRoute
+  public class MetlinkRoute
   {
 
     [JsonProperty("departures")]
-    public IEnumerable<Bus> Departures { get; set; }
+    public IEnumerable<MetlinkService> Departures { get; set; }
   }
 
 }

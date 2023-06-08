@@ -27,7 +27,7 @@ namespace missinglink.Services
       _logger = logger;
     }
 
-    public async Task<List<Bus>> GetBusUpdates()
+    public async Task<List<MetlinkService>> GetBusUpdates()
     {
 
       try
@@ -36,17 +36,17 @@ namespace missinglink.Services
         var tripsTask = GetTrips();
         var routesTask = GetRoutes();
         var positionsTask = GetVehiclePositions();
-        var serviceAlertTask = GetCancelledBusesFromMetlink();
+        var cancelledServicesTask = GetCancelledBusesFromMetlink();
 
-        await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask, serviceAlertTask);
+        await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask, cancelledServicesTask);
 
         var tripUpdates = await tripUpdatesTask;
         var trips = await tripsTask;
         var routes = await routesTask;
         var positions = await positionsTask;
-        var serviceAlert = await serviceAlertTask;
+        var cancelledServices = await cancelledServicesTask;
 
-        var allBuses = new List<Bus>();
+        var allBuses = new List<MetlinkService>();
 
         if (tripUpdates.Count > 0)
         {
@@ -67,6 +67,11 @@ namespace missinglink.Services
             bus.RouteDescription = routeThatBusIsOn.RouteDesc;
             bus.RouteShortName = routeThatBusIsOn.RouteShortName;
             bus.RouteLongName = routeThatBusIsOn.RouteLongName;
+            if (bus.TripId.Contains("RAIL") || bus.TripId.Contains("rail"))
+            {
+              Console.WriteLine(bus.TripId);
+            }
+
           }
           else
           {
@@ -84,32 +89,23 @@ namespace missinglink.Services
           }
         });
 
-        serviceAlert.entity.ForEach(entity =>
+        cancelledServices.ForEach(cancellation =>
         {
-          var alert = entity.alert.header_text.translation[0].text;
 
-          if (entity.alert.informed_entity.Count == 0)
+          var route = routes.Find(route => route.RouteId == cancellation.RouteId);
+
+          if (route == null)
           {
             return;
           }
 
-          var routeShortName = routes.Find(route => route.RouteId == entity.alert.informed_entity[0].route_id);
-
-          if (routeShortName == null || alert == null)
+          allBuses.Add(new MetlinkService()
           {
-            return;
-          }
-
-          if (alert.Contains("cancelled") && routeShortName.RouteShortName != null)
-          {
-            allBuses.Add(new Bus()
-            {
-              Status = "CANCELLED",
-              RouteLongName = entity.alert.header_text.translation[0].text,
-              RouteShortName = routeShortName.RouteShortName,
-              VehicleId = System.Guid.NewGuid().ToString()
-            });
-          }
+            Status = "CANCELLED",
+            RouteLongName = route.RouteLongName,
+            RouteShortName = route.RouteLongName,
+            VehicleId = System.Guid.NewGuid().ToString()
+          });
         });
 
         return allBuses;
@@ -120,20 +116,14 @@ namespace missinglink.Services
       }
     }
 
-    private List<Bus> ParseBusesFromTripUpdates(List<TripUpdateHolder> trips)
+    private List<MetlinkService> ParseBusesFromTripUpdates(List<TripUpdateHolder> trips)
     {
 
-      List<Bus> allBuses = new List<Bus>();
+      List<MetlinkService> allBuses = new List<MetlinkService>();
 
       trips.ToList().ForEach(trip =>
       {
-
-        if (trip.TripUpdate.Trip.TripId.Contains("RAIL") || trip.TripUpdate.Trip.TripId.Contains("rail"))
-        {
-          return;
-        }
-
-        var bus = new Bus();
+        var bus = new MetlinkService();
 
         bus.VehicleId = trip.TripUpdate.Vehicle.Id;
         int delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
@@ -165,24 +155,24 @@ namespace missinglink.Services
       return allBuses;
     }
 
-    public async Task<IEnumerable<Bus>> GetBusesFromStopId(string stopId)
+    public async Task<IEnumerable<MetlinkService>> GetBusesFromStopId(string stopId)
     {
       try
       {
         var response = await MakeAPIRequest($"https://api.opendata.metlink.org.nz/v1/stop-predictions?stop_id={stopId}");
-        BusRoute res = null;
+        MetlinkRoute res = null;
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<BusRoute>(responseStream);
+          res = JsonConvert.DeserializeObject<MetlinkRoute>(responseStream);
         }
         else
         {
           Console.WriteLine("Error in GetBusesFromStopId");
         }
 
-        return res == null ? Enumerable.Empty<Bus>() : res.Departures;
+        return res == null ? Enumerable.Empty<MetlinkService>() : res.Departures;
       }
       catch
       {
@@ -190,17 +180,17 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<ServiceAlertDto> GetCancelledBusesFromMetlink()
+    public async Task<List<MetlinkCancellationDTO>> GetCancelledBusesFromMetlink()
     {
       try
       {
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs-rt/servicealerts");
-        ServiceAlertDto res = null;
+        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/trip-cancellations");
+        List<MetlinkCancellationDTO> res = null;
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<ServiceAlertDto>(responseStream);
+          res = JsonConvert.DeserializeObject<List<MetlinkCancellationDTO>>(responseStream);
         }
         else
         {
@@ -265,7 +255,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<TripDTO>> GetTrips()
+    public async Task<List<MetlinkTripDTO>> GetTrips()
     {
       try
       {
@@ -278,12 +268,12 @@ namespace missinglink.Services
         string query = "?start=" + startDate + "&end=" + endDate;
 
         var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs/trips" + query);
-        List<TripDTO> res = new List<TripDTO>();
+        List<MetlinkTripDTO> res = new List<MetlinkTripDTO>();
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<List<TripDTO>>(responseStream);
+          res = JsonConvert.DeserializeObject<List<MetlinkTripDTO>>(responseStream);
         }
         else
         {

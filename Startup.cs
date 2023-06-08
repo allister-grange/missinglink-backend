@@ -32,12 +32,12 @@ namespace missinglink
         c.SwaggerDoc("v1", new OpenApiInfo { Title = "missinglink", Version = "v1" });
       });
 
-      services.AddDbContext<BusContext>(options =>
+      services.AddDbContext<ServiceContext>(options =>
         options.UseNpgsql(Configuration.GetConnectionString("Postgres")));
 
       services.AddControllers();
 
-      services.AddSingleton<BusHub>();
+      services.AddSingleton<MetlinkServicesHub>();
 
       services.AddSignalR();
     }
