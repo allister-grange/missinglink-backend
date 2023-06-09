@@ -1,4 +1,3 @@
-// Root myDeserializedClass = JsonSerializer.Deserialize<Root>(myJsonResponse)  {get; set;}
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
@@ -82,7 +81,7 @@ namespace missinglink.Models
     public string Id { get; set; }
   }
 
-  public class BusTripDTO
+  public class MetlinkTripUpdatesResponse
   {
     [JsonProperty("header")]
     public Header Header { get; set; }

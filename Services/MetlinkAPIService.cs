@@ -27,7 +27,7 @@ namespace missinglink.Services
       _logger = logger;
     }
 
-    public async Task<List<MetlinkService>> GetBusUpdates()
+    public async Task<List<MetlinkService>> GetServicesUpdates()
     {
 
       try
@@ -36,7 +36,7 @@ namespace missinglink.Services
         var tripsTask = GetTrips();
         var routesTask = GetRoutes();
         var positionsTask = GetVehiclePositions();
-        var cancelledServicesTask = GetCancelledBusesFromMetlink();
+        var cancelledServicesTask = GetCancelledServicesFromMetlink();
 
         await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask, cancelledServicesTask);
 
@@ -46,46 +46,46 @@ namespace missinglink.Services
         var positions = await positionsTask;
         var cancelledServices = await cancelledServicesTask;
 
-        var allBuses = new List<MetlinkService>();
+        var allServices = new List<MetlinkService>();
 
         if (tripUpdates.Count > 0)
         {
-          _logger.LogInformation("Parsing buses from trip updates...");
-          allBuses = ParseBusesFromTripUpdates(tripUpdates);
-          _logger.LogInformation("Finished parsing bus trips");
+          _logger.LogInformation("Parsing services from trip updates...");
+          allServices = ParseServicesFromTripUpdates(tripUpdates);
+          _logger.LogInformation("Finished parsing service trips");
         }
 
-        allBuses.ForEach(bus =>
+        allServices.ForEach(service =>
         {
-          var tripThatBusIsOn = trips.Find(trip => trip.TripId == bus.TripId);
-          var positionForBus = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == bus.VehicleId);
-          var routeThatBusIsOn = routes.Find(route => route.RouteId == tripThatBusIsOn.RouteId);
+          var tripThatServiceIsOn = trips.Find(trip => trip.TripId == service.TripId);
+          var positionForService = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == service.VehicleId);
+          var routeThatServiceIsOn = routes.Find(route => route.RouteId == tripThatServiceIsOn.RouteId);
 
-          if (routeThatBusIsOn != null)
+          if (routeThatServiceIsOn != null)
           {
-            bus.RouteId = routeThatBusIsOn.RouteId;
-            bus.RouteDescription = routeThatBusIsOn.RouteDesc;
-            bus.RouteShortName = routeThatBusIsOn.RouteShortName;
-            bus.RouteLongName = routeThatBusIsOn.RouteLongName;
-            if (bus.TripId.Contains("RAIL") || bus.TripId.Contains("rail"))
+            service.RouteId = routeThatServiceIsOn.RouteId;
+            service.RouteDescription = routeThatServiceIsOn.RouteDesc;
+            service.RouteShortName = routeThatServiceIsOn.RouteShortName;
+            service.RouteLongName = routeThatServiceIsOn.RouteLongName;
+            if (service.TripId.Contains("RAIL") || service.TripId.Contains("rail"))
             {
-              Console.WriteLine(bus.TripId);
+              Console.WriteLine(service.TripId);
             }
 
           }
           else
           {
-            _logger.LogError($"Route that the bus {bus.VehicleId} is on is null");
+            _logger.LogError($"Route that the service {service.VehicleId} is on is null");
           }
-          if (positionForBus != null)
+          if (positionForService != null)
           {
-            bus.Bearing = positionForBus.VehiclePosition.Position.Bearing;
-            bus.Lat = positionForBus.VehiclePosition.Position.Latitude;
-            bus.Long = positionForBus.VehiclePosition.Position.Longitude;
+            service.Bearing = positionForService.VehiclePosition.Position.Bearing;
+            service.Lat = positionForService.VehiclePosition.Position.Latitude;
+            service.Long = positionForService.VehiclePosition.Position.Longitude;
           }
           else
           {
-            _logger.LogError($"Position for bus {bus.VehicleId} is null");
+            _logger.LogError($"Position for service {service.VehicleId} is null");
           }
         });
 
@@ -99,7 +99,7 @@ namespace missinglink.Services
             return;
           }
 
-          allBuses.Add(new MetlinkService()
+          allServices.Add(new MetlinkService()
           {
             Status = "CANCELLED",
             RouteLongName = route.RouteLongName,
@@ -108,7 +108,7 @@ namespace missinglink.Services
           });
         });
 
-        return allBuses;
+        return allServices;
       }
       catch
       {
@@ -116,46 +116,46 @@ namespace missinglink.Services
       }
     }
 
-    private List<MetlinkService> ParseBusesFromTripUpdates(List<TripUpdateHolder> trips)
+    private List<MetlinkService> ParseServicesFromTripUpdates(List<TripUpdateHolder> trips)
     {
 
-      List<MetlinkService> allBuses = new List<MetlinkService>();
+      List<MetlinkService> allServices = new List<MetlinkService>();
 
       trips.ToList().ForEach(trip =>
       {
-        var bus = new MetlinkService();
+        var service = new MetlinkService();
 
-        bus.VehicleId = trip.TripUpdate.Vehicle.Id;
+        service.VehicleId = trip.TripUpdate.Vehicle.Id;
         int delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
         if (delay > 120)
         {
-          bus.Status = "LATE";
+          service.Status = "LATE";
         }
         else if (delay < -90)
         {
-          bus.Status = "EARLY";
+          service.Status = "EARLY";
         }
         else if (delay == 0)
         {
-          bus.Status = "UNKNOWN";
+          service.Status = "UNKNOWN";
         }
         else
         {
-          bus.Status = "ONTIME";
+          service.Status = "ONTIME";
         }
-        bus.TripId = trip.TripUpdate.Trip.TripId;
-        bus.StopId = trip.TripUpdate.StopTimeUpdate.StopId;
-        bus.Delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
-        if (allBuses.Find(toFind => bus.VehicleId == toFind.VehicleId) == null)
+        service.TripId = trip.TripUpdate.Trip.TripId;
+        service.StopId = trip.TripUpdate.StopTimeUpdate.StopId;
+        service.Delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
+        if (allServices.Find(toFind => service.VehicleId == toFind.VehicleId) == null)
         {
-          allBuses.Add(bus);
+          allServices.Add(service);
         }
       });
 
-      return allBuses;
+      return allServices;
     }
 
-    public async Task<IEnumerable<MetlinkService>> GetBusesFromStopId(string stopId)
+    public async Task<IEnumerable<MetlinkService>> GetServicesFromStopId(string stopId)
     {
       try
       {
@@ -169,7 +169,7 @@ namespace missinglink.Services
         }
         else
         {
-          Console.WriteLine("Error in GetBusesFromStopId");
+          Console.WriteLine("Error in GetServicesFromStopId");
         }
 
         return res == null ? Enumerable.Empty<MetlinkService>() : res.Departures;
@@ -180,7 +180,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<MetlinkCancellationDTO>> GetCancelledBusesFromMetlink()
+    public async Task<List<MetlinkCancellationDTO>> GetCancelledServicesFromMetlink()
     {
       try
       {
@@ -194,7 +194,7 @@ namespace missinglink.Services
         }
         else
         {
-          Console.WriteLine("Error in GetBusesFromStopId");
+          Console.WriteLine("Error in GetServicesFromStopId");
         }
 
         return res;
@@ -210,12 +210,12 @@ namespace missinglink.Services
       try
       {
         var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs-rt/tripupdates");
-        BusTripDTO res = new BusTripDTO();
+        MetlinkTripUpdatesResponse res = new MetlinkTripUpdatesResponse();
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<BusTripDTO>(responseStream);
+          res = JsonConvert.DeserializeObject<MetlinkTripUpdatesResponse>(responseStream);
         }
         else
         {
@@ -255,7 +255,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<MetlinkTripDTO>> GetTrips()
+    public async Task<List<MetlinkTripResponse>> GetTrips()
     {
       try
       {
@@ -268,12 +268,12 @@ namespace missinglink.Services
         string query = "?start=" + startDate + "&end=" + endDate;
 
         var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs/trips" + query);
-        List<MetlinkTripDTO> res = new List<MetlinkTripDTO>();
+        List<MetlinkTripResponse> res = new List<MetlinkTripResponse>();
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<List<MetlinkTripDTO>>(responseStream);
+          res = JsonConvert.DeserializeObject<List<MetlinkTripResponse>>(responseStream);
         }
         else
         {

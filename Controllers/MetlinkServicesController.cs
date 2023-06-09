@@ -15,35 +15,35 @@ namespace missinglink.Controllers
   public class MetlinkServicesController : ControllerBase
   {
     private readonly ILogger<MetlinkServicesController> _logger;
-    private readonly ServiceContext _BusContext;
+    private readonly ServiceContext _ServiceContext;
     private readonly MetlinkAPIServices _MetlinkAPIService;
-    public MetlinkServicesController(ILogger<MetlinkServicesController> logger, ServiceContext BusContext,
+    public MetlinkServicesController(ILogger<MetlinkServicesController> logger, ServiceContext ServiceContext,
       MetlinkAPIServices MetlinkAPIService)
     {
       _logger = logger;
-      _BusContext = BusContext;
+      _ServiceContext = ServiceContext;
       _MetlinkAPIService = MetlinkAPIService;
     }
 
     [HttpGet("updates")]
-    public async Task<IEnumerable<MetlinkService>> BusTripUpdates()
+    public async Task<IEnumerable<MetlinkService>> ServiceTripUpdates()
     {
-      var buses = _BusContext.Services;
+      var services = _ServiceContext.Services;
 
-      if (buses == null || buses.Count() == 0)
+      if (services == null || services.Count() == 0)
       {
-        throw new Exception("Buses table in database not populated. Try calling GetBusTripsFromTripUpdates.");
+        throw new Exception("Services table in database not populated. Try calling GetServiceTripsFromTripUpdates.");
       }
 
-      return buses;
+      return services;
     }
 
     [HttpGet("statistics")]
-    public async Task<IEnumerable<BusStatistic>> GetBusStatistics(string? startDate, string? endDate)
+    public async Task<IEnumerable<ServiceStatistic>> GetServiceStatistics(string? startDate, string? endDate)
     {
 
       _logger.LogInformation("passed in dates: " + startDate + " " + endDate);
-      IEnumerable<BusStatistic> stats = null;
+      IEnumerable<ServiceStatistic> stats = null;
 
       if (!String.IsNullOrEmpty(startDate) && !String.IsNullOrEmpty(endDate))
       {
@@ -55,7 +55,7 @@ namespace missinglink.Controllers
           startDateInput = DateTime.Parse(startDate);
           endDateInput = DateTime.Parse(endDate);
 
-          stats = _BusContext.ServiceStatistics.Where((stat) => (
+          stats = _ServiceContext.ServiceStatistics.Where((stat) => (
             stat.Timestamp >= startDateInput && stat.Timestamp <= endDateInput
           ));
         }
@@ -68,26 +68,26 @@ namespace missinglink.Controllers
       }
       else
       {
-        stats = _BusContext.ServiceStatistics;
+        stats = _ServiceContext.ServiceStatistics;
       }
 
       if (stats == null || stats.Count() == 0)
       {
-        throw new Exception("BusStatistic table in database not populated. Try calling UpdateBusStatistics.");
+        throw new Exception("ServiceStatistic table in database not populated. Try calling UpdateServiceStatistics.");
       }
 
       return stats;
     }
 
     [HttpPost("updates")]
-    public async Task<ActionResult> UpdateBusTrips()
+    public async Task<ActionResult> UpdateServiceTrips()
     {
       try
       {
-        var allBuses = await _MetlinkAPIService.GetBusUpdates();
-        if (allBuses.Count > 0)
+        var allServices = await _MetlinkAPIService.GetServicesUpdates();
+        if (allServices.Count > 0)
         {
-          UpdateDbWithNewBuses(allBuses);
+          UpdateDbWithNewServices(allServices);
           return Ok();
         }
         else
@@ -103,41 +103,41 @@ namespace missinglink.Controllers
 
 
     [HttpPost("statistics")]
-    public async Task<ActionResult> UpdateBusStatistics()
+    public async Task<ActionResult> UpdateServiceStatistics()
     {
-      await UpdateBusTrips();
+      await UpdateServiceTrips();
 
-      var allBuses = await BusTripUpdates();
-      var newBusStatistic = new BusStatistic();
+      var allServices = await ServiceTripUpdates();
+      var newServiceStatistic = new ServiceStatistic();
 
-      if (allBuses == null)
+      if (allServices == null)
       {
-        return NotFound("The bus table must be empty");
+        return NotFound("The service table must be empty");
       }
 
-      newBusStatistic.DelayedBuses = allBuses.Where(bus => bus.Status == "LATE").Count();
-      newBusStatistic.EarlyBuses = allBuses.Where(bus => bus.Status == "EARLY").Count();
-      newBusStatistic.NotReportingTimeBuses = allBuses.Where(bus => bus.Status == "UNKNOWN").Count();
-      newBusStatistic.OnTimeBuses = allBuses.Where(bus => bus.Status == "ONTIME").Count();
-      newBusStatistic.CancelledBuses = allBuses.Where(bus => bus.Status == "CANCELLED").Count();
-      newBusStatistic.TotalBuses = allBuses.Where(bus => bus.Status != "CANCELLED").Count();
+      newServiceStatistic.DelayedServices = allServices.Where(service => service.Status == "LATE").Count();
+      newServiceStatistic.EarlyServices = allServices.Where(service => service.Status == "EARLY").Count();
+      newServiceStatistic.NotReportingTimeServices = allServices.Where(service => service.Status == "UNKNOWN").Count();
+      newServiceStatistic.OnTimeServices = allServices.Where(service => service.Status == "ONTIME").Count();
+      newServiceStatistic.CancelledServices = allServices.Where(service => service.Status == "CANCELLED").Count();
+      newServiceStatistic.TotalServices = allServices.Where(service => service.Status != "CANCELLED").Count();
 
       DateTime utcTime = DateTime.UtcNow;
       TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
       DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
-      newBusStatistic.Timestamp = currentDateTime;
+      newServiceStatistic.Timestamp = currentDateTime;
 
-      await _BusContext.ServiceStatistics.AddAsync(newBusStatistic);
-      await _BusContext.SaveChangesAsync();
+      await _ServiceContext.ServiceStatistics.AddAsync(newServiceStatistic);
+      await _ServiceContext.SaveChangesAsync();
       return Ok();
     }
 
-    // clears all buses from the db and starts again with the fresh data
-    private void UpdateDbWithNewBuses(List<MetlinkService> buses)
+    // clears all services from the db and starts again with the fresh data
+    private void UpdateDbWithNewServices(List<MetlinkService> services)
     {
-      _BusContext.Services.RemoveRange(_BusContext.Services);
-      _BusContext.Services.AddRange(buses);
-      _BusContext.SaveChanges();
+      _ServiceContext.Services.RemoveRange(_ServiceContext.Services);
+      _ServiceContext.Services.AddRange(services);
+      _ServiceContext.SaveChanges();
     }
   }
 }

@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace missinglink.Models
 {
-  public class MetlinkTripDTO
+  public class MetlinkTripResponse
   {
     [JsonProperty("route_id")]
     public string RouteId { get; set; }

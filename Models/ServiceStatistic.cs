@@ -3,23 +3,23 @@ using System.ComponentModel.DataAnnotations;
 
 namespace missinglink.Models
 {
-  public class BusStatistic
+  public class ServiceStatistic
   {
 
     [Key]
     public int BatchId { get; set; }
 
-    public int DelayedBuses { get; set; }
+    public int DelayedServices { get; set; }
 
-    public int TotalBuses { get; set; }
+    public int TotalServices { get; set; }
 
-    public int CancelledBuses { get; set; }
+    public int CancelledServices { get; set; }
 
-    public int EarlyBuses { get; set; }
+    public int EarlyServices { get; set; }
 
-    public int OnTimeBuses { get; set; }
+    public int OnTimeServices { get; set; }
 
-    public int NotReportingTimeBuses { get; set; }
+    public int NotReportingTimeServices { get; set; }
 
     public DateTime Timestamp { get; set; }
   }

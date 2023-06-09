@@ -18,25 +18,25 @@ public class MetlinkServicesHub : Hub
 
   private async void StartTimer()
   {
-    await SendBusesUpdate();
+    await SendServicesUpdate();
     var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(20));
     while (await periodicTimer.WaitForNextTickAsync())
     {
-      await SendBusesUpdate();
+      await SendServicesUpdate();
     }
   }
-  public async Task SendBusesUpdate()
+  public async Task SendServicesUpdate()
   {
     if (connectionIds.Count > 0)
     {
       // get bus updates
       try
       {
-        var buses = await _MetlinkAPIService.GetBusUpdates();
+        var services = await _MetlinkAPIService.GetServicesUpdates();
 
         // ship them to the user
-        Console.WriteLine("Sending out bus updates of " + buses.Count + " buses to: " + connectionIds.Count + " client/s.");
-        // await base.Clients.All.SendAsync("BusUpdates", buses);
+        Console.WriteLine("Sending out service updates of " + services.Count + " services to: " + connectionIds.Count + " client/s.");
+        // await base.Clients.All.SendAsync("ServiceUpdates", services);
       }
       catch
       {

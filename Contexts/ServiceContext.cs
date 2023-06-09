@@ -6,7 +6,7 @@ namespace missinglink.Contexts
   public class ServiceContext : DbContext
   {
     public DbSet<MetlinkService> Services { get; set; }
-    public DbSet<BusStatistic> ServiceStatistics { get; set; }
+    public DbSet<ServiceStatistic> ServiceStatistics { get; set; }
     public ServiceContext(DbContextOptions<ServiceContext> options)
     : base(options)
     {
@@ -16,7 +16,7 @@ namespace missinglink.Contexts
     {
       // Configure table names
       modelBuilder.Entity<MetlinkService>().ToTable("services");
-      modelBuilder.Entity<BusStatistic>().ToTable("service_statistics");
+      modelBuilder.Entity<ServiceStatistic>().ToTable("service_statistics");
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
