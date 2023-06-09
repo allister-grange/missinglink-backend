@@ -150,42 +150,17 @@ namespace missinglink.Services
       return allServices;
     }
 
-    public async Task<IEnumerable<MetlinkService>> GetServicesFromStopId(string stopId)
-    {
-      try
-      {
-        var response = await MakeAPIRequest($"https://api.opendata.metlink.org.nz/v1/stop-predictions?stop_id={stopId}");
-        MetlinkRoute res = null;
-
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<MetlinkRoute>(responseStream);
-        }
-        else
-        {
-          Console.WriteLine("Error in GetServicesFromStopId");
-        }
-
-        return res == null ? Enumerable.Empty<MetlinkService>() : res.Departures;
-      }
-      catch
-      {
-        throw;
-      }
-    }
-
-    public async Task<List<MetlinkCancellationDTO>> GetCancelledServicesFromMetlink()
+    public async Task<List<MetlinkCancellationResponse>> GetCancelledServicesFromMetlink()
     {
       try
       {
         var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/trip-cancellations");
-        List<MetlinkCancellationDTO> res = null;
+        List<MetlinkCancellationResponse> res = null;
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<List<MetlinkCancellationDTO>>(responseStream);
+          res = JsonConvert.DeserializeObject<List<MetlinkCancellationResponse>>(responseStream);
         }
         else
         {
@@ -230,12 +205,12 @@ namespace missinglink.Services
       try
       {
         var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs-rt/vehiclepositions");
-        VehiclePostionDTO res = new VehiclePostionDTO();
+        VehiclePositionResponse res = new VehiclePositionResponse();
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<VehiclePostionDTO>(responseStream);
+          res = JsonConvert.DeserializeObject<VehiclePositionResponse>(responseStream);
         }
         else
         {
@@ -283,17 +258,17 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<RouteDTO>> GetRoutes()
+    public async Task<List<MetlinkRouteResponse>> GetRoutes()
     {
       try
       {
         var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs/routes");
-        List<RouteDTO> res = new List<RouteDTO>();
+        List<MetlinkRouteResponse> res = new List<MetlinkRouteResponse>();
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<List<RouteDTO>>(responseStream);
+          res = JsonConvert.DeserializeObject<List<MetlinkRouteResponse>>(responseStream);
         }
         else
         {

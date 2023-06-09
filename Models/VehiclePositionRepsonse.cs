@@ -82,7 +82,7 @@ namespace missinglink.Models.VehiclePositions
     public VehiclePosition VehiclePosition { get; set; }
   }
 
-  public class VehiclePostionDTO
+  public class VehiclePositionResponse
   {
     [JsonProperty("header")]
     public Header Header { get; set; }

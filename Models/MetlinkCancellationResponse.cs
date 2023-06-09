@@ -2,7 +2,7 @@ using Newtonsoft.Json;
 
 namespace missinglink.Models
 {
-  public class MetlinkCancellationDTO
+  public class MetlinkCancellationResponse
   {
     [JsonProperty("id")]
     public string Id { get; set; }

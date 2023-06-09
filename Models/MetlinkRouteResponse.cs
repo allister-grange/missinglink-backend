@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-public class RouteDTO
+public class MetlinkRouteResponse
 {
   [JsonProperty("id")]
   public int Id { get; set; }
