@@ -29,14 +29,13 @@ public class MetlinkServicesHub : Hub
   {
     if (connectionIds.Count > 0)
     {
-      // get bus updates
+      // get service updates
       try
       {
         var services = await _MetlinkAPIService.GetServicesUpdates();
 
         // ship them to the user
-        Console.WriteLine("Sending out service updates of " + services.Count + " services to: " + connectionIds.Count + " client/s.");
-        // await base.Clients.All.SendAsync("ServiceUpdates", services);
+        await base.Clients.All.SendAsync("ServiceUpdates", services);
       }
       catch
       {

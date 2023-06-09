@@ -67,11 +67,6 @@ namespace missinglink.Services
             service.RouteDescription = routeThatServiceIsOn.RouteDesc;
             service.RouteShortName = routeThatServiceIsOn.RouteShortName;
             service.RouteLongName = routeThatServiceIsOn.RouteLongName;
-            if (service.TripId.Contains("RAIL") || service.TripId.Contains("rail"))
-            {
-              Console.WriteLine(service.TripId);
-            }
-
           }
           else
           {
