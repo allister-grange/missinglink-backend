@@ -45,85 +45,65 @@ namespace missinglink.Services
         var positions = await positionsTask;
         var cancelledServices = await cancelledServicesTask;
 
-        var allServices = new List<MetlinkService>();
+        int newBatchId = await GenerateNewBatchId();
 
-        if (tripUpdates.Count > 0)
-        {
-          _logger.LogInformation("Parsing services from trip updates...");
-          allServices = await ParseServicesFromTripUpdates(tripUpdates);
-          _logger.LogInformation("Finished parsing service trips");
-        }
+        var allServices = await ParseServicesFromTripUpdates(tripUpdates);
 
-        allServices.ForEach(service =>
-        {
-          var tripThatServiceIsOn = trips.Find(trip => trip.TripId == service.TripId);
-          var positionForService = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == service.VehicleId);
-          var routeThatServiceIsOn = routes.Find(route => route.RouteId == tripThatServiceIsOn.RouteId);
-          service.ProviderId = "METLINK";
+        UpdateServicesWithRoutesAndPositions(allServices, trips, routes, positions, newBatchId);
 
-          if (routeThatServiceIsOn != null)
-          {
-            service.RouteId = routeThatServiceIsOn.RouteId;
-            service.RouteDescription = routeThatServiceIsOn.RouteDesc;
-            service.RouteShortName = routeThatServiceIsOn.RouteShortName;
-            service.RouteLongName = routeThatServiceIsOn.RouteLongName;
-          }
-          else
-          {
-            _logger.LogError($"Route that the service {service.VehicleId} is on is null");
-          }
-          if (positionForService != null)
-          {
-            service.Bearing = positionForService.VehiclePosition.Position.Bearing;
-            service.Lat = positionForService.VehiclePosition.Position.Latitude;
-            service.Long = positionForService.VehiclePosition.Position.Longitude;
-          }
-          else
-          {
-            _logger.LogError($"Position for service {service.VehicleId} is null");
-          }
-        });
+        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancelledServices, routes, newBatchId);
 
-        cancelledServices.ForEach(cancellation =>
-        {
-
-          var route = routes.Find(route => route.RouteId == cancellation.RouteId);
-
-          if (route == null)
-          {
-            return;
-          }
-
-          allServices.Add(new MetlinkService()
-          {
-            Status = "CANCELLED",
-            RouteLongName = route.RouteLongName,
-            RouteShortName = route.RouteLongName,
-            VehicleId = System.Guid.NewGuid().ToString()
-          });
-        });
+        allServices.AddRange(cancelledServicesToBeAdded);
 
         return allServices;
       }
-      catch
+      catch (Exception ex)
       {
+        _logger.LogError(ex, "An error occurred while retrieving service updates.");
         throw;
       }
     }
 
-    private async Task<List<MetlinkService>> ParseServicesFromTripUpdates(List<TripUpdateHolder> trips)
+    private async Task<int> GenerateNewBatchId()
     {
+      int lastBatchId = await _metlinkServiceRepository.GetLatestBatchId();
+      return lastBatchId + 1;
+    }
 
+    private List<MetlinkService> GetCancelledServicesToBeAdded(List<MetlinkCancellationResponse> cancelledServices, List<MetlinkRouteResponse> routes, int newBatchId)
+    {
+      var cancelledServicesToBeAdded = new List<MetlinkService>();
+
+      foreach (var cancellation in cancelledServices)
+      {
+        var route = routes.Find(route => route.RouteId == cancellation.RouteId);
+
+        if (route != null)
+        {
+          var cancelledService = new MetlinkService()
+          {
+            Status = "CANCELLED",
+            RouteLongName = route.RouteLongName,
+            RouteShortName = route.RouteShortName,
+            VehicleId = System.Guid.NewGuid().ToString(),
+            BatchId = newBatchId
+          };
+
+          cancelledServicesToBeAdded.Add(cancelledService);
+        }
+      }
+
+      return cancelledServicesToBeAdded;
+    }
+
+
+    private async Task<List<MetlinkService>> ParseServicesFromTripUpdates(List<TripUpdateHolder> tripUpdates)
+    {
       List<MetlinkService> allServices = new List<MetlinkService>();
 
-      int lastBatchId = await _metlinkServiceRepository.GetLatestBatchId();
-      int newBatchId = lastBatchId + 1;
-
-
-      trips.ToList().ForEach(trip =>
+      tripUpdates.ToList().ForEach(trip =>
       {
         var service = new MetlinkService();
-        service.BatchId = newBatchId;
 
         service.VehicleId = trip.TripUpdate.Vehicle.Id;
         int delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
@@ -152,6 +132,42 @@ namespace missinglink.Services
       });
 
       return allServices;
+    }
+
+    private void UpdateServicesWithRoutesAndPositions(List<MetlinkService> services, List<MetlinkTripResponse> trips, List<MetlinkRouteResponse> routes, List<VehiclePositionHolder> positions, int newBatchId)
+    {
+      foreach (var service in services)
+      {
+        var tripThatServiceIsOn = trips.Find(trip => trip.TripId == service.TripId);
+        var positionForService = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == service.VehicleId);
+        var routeThatServiceIsOn = routes.Find(route => route.RouteId == tripThatServiceIsOn?.RouteId);
+
+        service.ProviderId = "METLINK";
+        service.BatchId = newBatchId;
+
+        if (routeThatServiceIsOn != null)
+        {
+          service.RouteId = routeThatServiceIsOn.RouteId;
+          service.RouteDescription = routeThatServiceIsOn.RouteDesc;
+          service.RouteShortName = routeThatServiceIsOn.RouteShortName;
+          service.RouteLongName = routeThatServiceIsOn.RouteLongName;
+        }
+        else
+        {
+          _logger.LogError($"Route that the service {service.VehicleId} is on is null");
+        }
+
+        if (positionForService != null)
+        {
+          service.Bearing = positionForService.VehiclePosition.Position.Bearing;
+          service.Lat = positionForService.VehiclePosition.Position.Latitude;
+          service.Long = positionForService.VehiclePosition.Position.Longitude;
+        }
+        else
+        {
+          _logger.LogError($"Position for service {service.VehicleId} is null");
+        }
+      }
     }
 
     public async Task<List<MetlinkCancellationResponse>> GetCancelledServicesFromMetlink()
