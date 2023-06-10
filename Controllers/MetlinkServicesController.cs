@@ -15,20 +15,18 @@ namespace missinglink.Controllers
   public class MetlinkServicesController : ControllerBase
   {
     private readonly ILogger<MetlinkServicesController> _logger;
-    private readonly ServiceContext _ServiceContext;
-    private readonly MetlinkAPIServices _MetlinkAPIService;
+    private readonly MetlinkAPIService _MetlinkAPIService;
     public MetlinkServicesController(ILogger<MetlinkServicesController> logger, ServiceContext ServiceContext,
-      MetlinkAPIServices MetlinkAPIService)
+      MetlinkAPIService MetlinkAPIService)
     {
       _logger = logger;
-      _ServiceContext = ServiceContext;
       _MetlinkAPIService = MetlinkAPIService;
     }
 
     [HttpGet("updates")]
-    public async Task<IEnumerable<MetlinkService>> ServiceTripUpdates()
+    public IEnumerable<MetlinkService> ServiceTripUpdates()
     {
-      var services = _ServiceContext.Services;
+      var services = _MetlinkAPIService.GetServices();
 
       if (services == null || services.Count() == 0)
       {
@@ -39,44 +37,39 @@ namespace missinglink.Controllers
     }
 
     [HttpGet("statistics")]
-    public async Task<IEnumerable<ServiceStatistic>> GetServiceStatistics(string? startDate, string? endDate)
+    public IActionResult GetServiceStatistics(string startDate, string endDate)
     {
 
       _logger.LogInformation("passed in dates: " + startDate + " " + endDate);
       IEnumerable<ServiceStatistic> stats = null;
 
-      if (!String.IsNullOrEmpty(startDate) && !String.IsNullOrEmpty(endDate))
+      if (String.IsNullOrEmpty(startDate) || String.IsNullOrEmpty(endDate))
       {
-        DateTime startDateInput;
-        DateTime endDateInput;
-
-        try
-        {
-          startDateInput = DateTime.Parse(startDate);
-          endDateInput = DateTime.Parse(endDate);
-
-          stats = _ServiceContext.ServiceStatistics.Where((stat) => (
-            stat.Timestamp >= startDateInput && stat.Timestamp <= endDateInput
-          ));
-        }
-        catch (System.FormatException e)
-        {
-          _logger.LogError($"Your date inputs were formatted incorrectly {e.ToString()}");
-          throw new ArgumentException("Your date inputs were formatted incorrectly");
-        }
-        _logger.LogInformation("Parsed dates: " + startDateInput + " " + endDateInput);
-      }
-      else
-      {
-        stats = _ServiceContext.ServiceStatistics;
+        return BadRequest();
       }
 
+      DateTime startDateInput;
+      DateTime endDateInput;
+
+      try
+      {
+        startDateInput = DateTime.Parse(startDate);
+        endDateInput = DateTime.Parse(endDate);
+
+        stats = _MetlinkAPIService.GetServiceStatisticsByDate(startDateInput, endDateInput);
+      }
+      catch (System.FormatException e)
+      {
+        _logger.LogError($"Your date inputs were formatted incorrectly {e.ToString()}");
+        throw new ArgumentException("Your date inputs were formatted incorrectly");
+      }
+      _logger.LogInformation("Parsed dates: " + startDateInput + " " + endDateInput);
       if (stats == null || stats.Count() == 0)
       {
         throw new Exception("ServiceStatistic table in database not populated. Try calling UpdateServiceStatistics.");
       }
 
-      return stats;
+      return Ok(stats);
     }
 
     [HttpPost("updates")]
@@ -87,7 +80,8 @@ namespace missinglink.Controllers
         var allServices = await _MetlinkAPIService.GetServicesUpdates();
         if (allServices.Count > 0)
         {
-          UpdateDbWithNewServices(allServices);
+          _MetlinkAPIService.DeleteAllServices();
+          await _MetlinkAPIService.AddServicesAsync(allServices);
           return Ok();
         }
         else
@@ -101,13 +95,12 @@ namespace missinglink.Controllers
       }
     }
 
-
     [HttpPost("statistics")]
     public async Task<ActionResult> UpdateServiceStatistics()
     {
       await UpdateServiceTrips();
 
-      var allServices = await ServiceTripUpdates();
+      var allServices = ServiceTripUpdates();
       var newServiceStatistic = new ServiceStatistic();
 
       if (allServices == null)
@@ -127,17 +120,8 @@ namespace missinglink.Controllers
       DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
       newServiceStatistic.Timestamp = currentDateTime;
 
-      await _ServiceContext.ServiceStatistics.AddAsync(newServiceStatistic);
-      await _ServiceContext.SaveChangesAsync();
+      await _MetlinkAPIService.AddStatisticAsync(newServiceStatistic);
       return Ok();
-    }
-
-    // clears all services from the db and starts again with the fresh data
-    private void UpdateDbWithNewServices(List<MetlinkService> services)
-    {
-      _ServiceContext.Services.RemoveRange(_ServiceContext.Services);
-      _ServiceContext.Services.AddRange(services);
-      _ServiceContext.SaveChanges();
     }
   }
 }

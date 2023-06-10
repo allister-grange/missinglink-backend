@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -9,22 +8,24 @@ using missinglink.Models.VehiclePositions;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
+using missinglink.Metlink.Repository;
 
 namespace missinglink.Services
 {
-  public class MetlinkAPIServices
+  public class MetlinkAPIService
   {
 
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<MetlinkAPIServices> _logger;
+    private readonly ILogger<MetlinkAPIService> _logger;
+    private readonly IMetlinkServiceRepository _metlinkServiceRepository;
 
-
-    public MetlinkAPIServices(ILogger<MetlinkAPIServices> logger, IHttpClientFactory clientFactory, IConfiguration configuration)
+    public MetlinkAPIService(ILogger<MetlinkAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IMetlinkServiceRepository metlinkServiceRepository)
     {
       _httpClient = clientFactory.CreateClient("metlinkService");
       _configuration = configuration;
       _logger = logger;
+      _metlinkServiceRepository = metlinkServiceRepository;
     }
 
     public async Task<List<MetlinkService>> GetServicesUpdates()
@@ -281,6 +282,38 @@ namespace missinglink.Services
       {
         throw;
       }
+    }
+
+    public IEnumerable<MetlinkService> GetServices()
+    {
+      try
+      {
+        return _metlinkServiceRepository.GetAll();
+      }
+      catch
+      {
+        throw;
+      }
+    }
+
+    public IEnumerable<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
+    {
+      return _metlinkServiceRepository.GetServiceStatisticsByDate(startDate, endDate);
+    }
+
+    public Task AddStatisticAsync(ServiceStatistic statistic)
+    {
+      return _metlinkServiceRepository.AddStatisticAsync(statistic);
+    }
+
+    public Task AddServicesAsync(List<MetlinkService> services)
+    {
+      return _metlinkServiceRepository.AddServicesAsync(services);
+    }
+
+    public void DeleteAllServices()
+    {
+      _metlinkServiceRepository.DeleteAllServices();
     }
 
     private async Task<HttpResponseMessage> MakeAPIRequest(string url)

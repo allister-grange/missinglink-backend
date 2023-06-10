@@ -7,10 +7,10 @@ using missinglink.Services;
 
 public class MetlinkServicesHub : Hub
 {
-  private readonly MetlinkAPIServices _MetlinkAPIService;
+  private readonly MetlinkAPIService _MetlinkAPIService;
   private readonly List<string> connectionIds = new List<string>();
 
-  public MetlinkServicesHub(MetlinkAPIServices MetlinkAPIService)
+  public MetlinkServicesHub(MetlinkAPIService MetlinkAPIService)
   {
     _MetlinkAPIService = MetlinkAPIService;
     StartTimer();
