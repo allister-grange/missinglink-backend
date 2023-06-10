@@ -22,6 +22,11 @@ namespace missinglink.Metlink.Repository
       return _dbContext.Services.Find(id);
     }
 
+    public List<MetlinkService> GetByBatchId(int batchId)
+    {
+      return _dbContext.Services.Where((service) => service.BatchId == batchId).ToList();
+    }
+
     public IEnumerable<MetlinkService> GetAll()
     {
       return _dbContext.Services;
@@ -66,7 +71,7 @@ namespace missinglink.Metlink.Repository
 
     public async Task<int> GetLatestBatchId()
     {
-      var batchIdsQuery = _dbContext.Services
+      var batchIdsQuery = _dbContext.ServiceStatistics
           .OrderByDescending(s => s.BatchId)
           .Select(s => s.BatchId)
           .Take(1);

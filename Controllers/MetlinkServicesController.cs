@@ -24,13 +24,13 @@ namespace missinglink.Controllers
     }
 
     [HttpGet("updates")]
-    public IEnumerable<MetlinkService> ServiceTripUpdates()
+    public async Task<IEnumerable<MetlinkService>> GetServiceTripUpdates()
     {
-      var services = _MetlinkAPIService.GetServices();
+      var services = await _MetlinkAPIService.GetLatestServices();
 
       if (services == null || services.Count() == 0)
       {
-        throw new Exception("Services table in database not populated. Try calling GetServiceTripsFromTripUpdates.");
+        throw new Exception("Services table in database not populated.");
       }
 
       return services;
@@ -72,35 +72,16 @@ namespace missinglink.Controllers
       return Ok(stats);
     }
 
-    [HttpPost("updates")]
-    public async Task<ActionResult> UpdateServiceTrips()
-    {
-      try
-      {
-        var allServices = await _MetlinkAPIService.GetServicesUpdates();
-        if (allServices.Count > 0)
-        {
-          _MetlinkAPIService.DeleteAllServices();
-          await _MetlinkAPIService.AddServicesAsync(allServices);
-          return Ok();
-        }
-        else
-        {
-          return NotFound();
-        }
-      }
-      catch
-      {
-        return Problem("Was unable to query Metlink's API");
-      }
-    }
-
     [HttpPost("statistics")]
     public async Task<ActionResult> UpdateServiceStatistics()
     {
-      await UpdateServiceTrips();
+      var newBatchId = await _MetlinkAPIService.GenerateNewBatchId();
+      var allServices = await _MetlinkAPIService.GetServicesUpdates(newBatchId);
+      if (allServices.Count > 0)
+      {
+        await _MetlinkAPIService.AddServicesAsync(allServices);
+      }
 
-      var allServices = ServiceTripUpdates();
       var newServiceStatistic = new ServiceStatistic();
 
       if (allServices == null)
@@ -114,11 +95,11 @@ namespace missinglink.Controllers
       newServiceStatistic.OnTimeServices = allServices.Where(service => service.Status == "ONTIME").Count();
       newServiceStatistic.CancelledServices = allServices.Where(service => service.Status == "CANCELLED").Count();
       newServiceStatistic.TotalServices = allServices.Where(service => service.Status != "CANCELLED").Count();
-
       DateTime utcTime = DateTime.UtcNow;
       TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
       DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
       newServiceStatistic.Timestamp = currentDateTime;
+      newServiceStatistic.BatchId = newBatchId;
 
       await _MetlinkAPIService.AddStatisticAsync(newServiceStatistic);
       return Ok();

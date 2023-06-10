@@ -38,9 +38,6 @@ namespace missinglink
       services.AddScoped<MetlinkAPIService>();
 
       services.AddControllers();
-
-      services.AddScoped<MetlinkServicesHub>();
-
       services.AddSignalR();
     }
 
@@ -86,6 +83,7 @@ namespace missinglink
           options.Transports = HttpTransportType.ServerSentEvents;
         });
       });
+
     }
   }
 }

@@ -27,7 +27,7 @@ namespace missinglink.Services
       _metlinkServiceRepository = metlinkServiceRepository;
     }
 
-    public async Task<List<MetlinkService>> GetServicesUpdates()
+    public async Task<List<MetlinkService>> GetServicesUpdates(int newBatchId)
     {
       try
       {
@@ -45,15 +45,29 @@ namespace missinglink.Services
         var positions = await positionsTask;
         var cancelledServices = await cancelledServicesTask;
 
-        int newBatchId = await GenerateNewBatchId();
-
         var allServices = await ParseServicesFromTripUpdates(tripUpdates);
 
-        UpdateServicesWithRoutesAndPositions(allServices, trips, routes, positions, newBatchId);
+        // todo this is bad practise (not cloning the array)
+        UpdateServicesWithRoutesAndPositions(allServices, trips, routes, positions);
 
         var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancelledServices, routes, newBatchId);
 
         allServices.AddRange(cancelledServicesToBeAdded);
+
+        allServices.ForEach((service) =>
+        {
+          service.BatchId = newBatchId;
+          service.ProviderId = "Metlink";
+          service.ServiceName = service.RouteShortName;
+          if (int.TryParse(service.RouteShortName, out _))
+          {
+            service.VehicleType = "BUS";
+          }
+          else
+          {
+            service.VehicleType = "TRAIN";
+          }
+        });
 
         return allServices;
       }
@@ -64,7 +78,7 @@ namespace missinglink.Services
       }
     }
 
-    private async Task<int> GenerateNewBatchId()
+    public async Task<int> GenerateNewBatchId()
     {
       int lastBatchId = await _metlinkServiceRepository.GetLatestBatchId();
       return lastBatchId + 1;
@@ -83,10 +97,11 @@ namespace missinglink.Services
           var cancelledService = new MetlinkService()
           {
             Status = "CANCELLED",
-            RouteLongName = route.RouteLongName,
+            TripId = cancellation.TripId,
+            RouteId = route.RouteId,
+            RouteDescription = route.RouteDesc,
             RouteShortName = route.RouteShortName,
-            VehicleId = System.Guid.NewGuid().ToString(),
-            BatchId = newBatchId
+            RouteLongName = route.RouteLongName,
           };
 
           cancelledServicesToBeAdded.Add(cancelledService);
@@ -134,16 +149,13 @@ namespace missinglink.Services
       return allServices;
     }
 
-    private void UpdateServicesWithRoutesAndPositions(List<MetlinkService> services, List<MetlinkTripResponse> trips, List<MetlinkRouteResponse> routes, List<VehiclePositionHolder> positions, int newBatchId)
+    private void UpdateServicesWithRoutesAndPositions(List<MetlinkService> services, List<MetlinkTripResponse> trips, List<MetlinkRouteResponse> routes, List<VehiclePositionHolder> positions)
     {
       foreach (var service in services)
       {
         var tripThatServiceIsOn = trips.Find(trip => trip.TripId == service.TripId);
         var positionForService = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == service.VehicleId);
         var routeThatServiceIsOn = routes.Find(route => route.RouteId == tripThatServiceIsOn?.RouteId);
-
-        service.ProviderId = "METLINK";
-        service.BatchId = newBatchId;
 
         if (routeThatServiceIsOn != null)
         {
@@ -303,11 +315,13 @@ namespace missinglink.Services
       }
     }
 
-    public IEnumerable<MetlinkService> GetServices()
+    public async Task<IEnumerable<MetlinkService>> GetLatestServices()
     {
       try
       {
-        return _metlinkServiceRepository.GetAll();
+        var batchId = await _metlinkServiceRepository.GetLatestBatchId();
+        Console.WriteLine(batchId);
+        return _metlinkServiceRepository.GetByBatchId(batchId);
       }
       catch
       {

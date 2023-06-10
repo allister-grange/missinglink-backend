@@ -7,19 +7,19 @@ using missinglink.Services;
 
 public class MetlinkServicesHub : Hub
 {
-  private readonly MetlinkAPIService _MetlinkAPIService;
+  private readonly MetlinkAPIService _metlinkAPIService;
   private readonly List<string> connectionIds = new List<string>();
 
   public MetlinkServicesHub(MetlinkAPIService MetlinkAPIService)
   {
-    _MetlinkAPIService = MetlinkAPIService;
+    _metlinkAPIService = MetlinkAPIService;
     StartTimer();
   }
 
-  private async void StartTimer()
+  private async Task StartTimer()
   {
     await SendServicesUpdate();
-    var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(20));
+    var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(200));
     while (await periodicTimer.WaitForNextTickAsync())
     {
       await SendServicesUpdate();
@@ -32,10 +32,10 @@ public class MetlinkServicesHub : Hub
       // get service updates
       try
       {
-        var services = await _MetlinkAPIService.GetServicesUpdates();
+        // var services = await _metlinkAPIService.GetServicesUpdates();
 
         // ship them to the user
-        await base.Clients.All.SendAsync("ServiceUpdates", services);
+        // await base.Clients.All.SendAsync("ServiceUpdates", services);
       }
       catch
       {
