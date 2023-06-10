@@ -14,7 +14,6 @@ namespace missinglink.Services
 {
   public class MetlinkAPIService
   {
-
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<MetlinkAPIService> _logger;
@@ -30,7 +29,6 @@ namespace missinglink.Services
 
     public async Task<List<MetlinkService>> GetServicesUpdates()
     {
-
       try
       {
         var tripUpdatesTask = GetTripUpdates();
@@ -52,7 +50,7 @@ namespace missinglink.Services
         if (tripUpdates.Count > 0)
         {
           _logger.LogInformation("Parsing services from trip updates...");
-          allServices = ParseServicesFromTripUpdates(tripUpdates);
+          allServices = await ParseServicesFromTripUpdates(tripUpdates);
           _logger.LogInformation("Finished parsing service trips");
         }
 
@@ -61,6 +59,7 @@ namespace missinglink.Services
           var tripThatServiceIsOn = trips.Find(trip => trip.TripId == service.TripId);
           var positionForService = positions.Find(pos => pos.VehiclePosition.Vehicle.Id == service.VehicleId);
           var routeThatServiceIsOn = routes.Find(route => route.RouteId == tripThatServiceIsOn.RouteId);
+          service.ProviderId = "METLINK";
 
           if (routeThatServiceIsOn != null)
           {
@@ -112,14 +111,19 @@ namespace missinglink.Services
       }
     }
 
-    private List<MetlinkService> ParseServicesFromTripUpdates(List<TripUpdateHolder> trips)
+    private async Task<List<MetlinkService>> ParseServicesFromTripUpdates(List<TripUpdateHolder> trips)
     {
 
       List<MetlinkService> allServices = new List<MetlinkService>();
 
+      int lastBatchId = await _metlinkServiceRepository.GetLatestBatchId();
+      int newBatchId = lastBatchId + 1;
+
+
       trips.ToList().ForEach(trip =>
       {
         var service = new MetlinkService();
+        service.BatchId = newBatchId;
 
         service.VehicleId = trip.TripUpdate.Vehicle.Id;
         int delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
@@ -140,7 +144,6 @@ namespace missinglink.Services
           service.Status = "ONTIME";
         }
         service.TripId = trip.TripUpdate.Trip.TripId;
-        service.StopId = trip.TripUpdate.StopTimeUpdate.StopId;
         service.Delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
         if (allServices.Find(toFind => service.VehicleId == toFind.VehicleId) == null)
         {

@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace missinglink.Models
 {
@@ -7,15 +7,21 @@ namespace missinglink.Models
   {
 
     [Key]
-    [JsonProperty("vehicle_id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public string Id { get; set; }
     public string VehicleId { get; set; }
+    public int BatchId { get; set; }
 
-    [JsonProperty("status")]
+    // 22 bus or JVL train etc
+    public string ServiceName { get; set; }
+
+    // Metlink or AT etc
+    public string ProviderId { get; set; }
+    public string VehicleType { get; set; }
     public string Status { get; set; }
-    public string StopId { get; set; }
     public int Delay { get; set; }
-    public string RouteId { get; set; }
     public string TripId { get; set; }
+    public string RouteId { get; set; }
     public string RouteDescription { get; set; }
     public string RouteShortName { get; set; }
     public string RouteLongName { get; set; }

@@ -4,6 +4,7 @@ using missinglink.Contexts;
 using missinglink.Models;
 using System.Linq; // Add this namespace
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace missinglink.Metlink.Repository
 {
@@ -61,6 +62,16 @@ namespace missinglink.Metlink.Repository
     {
       await _dbContext.Services.AddRangeAsync(services);
       await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task<int> GetLatestBatchId()
+    {
+      var batchIdsQuery = _dbContext.Services
+          .OrderByDescending(s => s.BatchId)
+          .Select(s => s.BatchId)
+          .Take(1);
+
+      return await batchIdsQuery.FirstOrDefaultAsync();
     }
 
     public void DeleteAllServices()

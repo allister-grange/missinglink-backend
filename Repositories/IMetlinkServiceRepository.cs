@@ -16,5 +16,6 @@ namespace missinglink.Metlink.Repository
     Task AddStatisticAsync(ServiceStatistic statistic);
     Task AddServicesAsync(List<MetlinkService> services);
     void DeleteAllServices();
+    Task<int> GetLatestBatchId();
   }
 }
