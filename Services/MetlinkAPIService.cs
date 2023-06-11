@@ -27,7 +27,7 @@ namespace missinglink.Services
       _metlinkServiceRepository = metlinkServiceRepository;
     }
 
-    public async Task<List<MetlinkService>> GetServicesUpdates(int newBatchId)
+    public async Task<List<MetlinkService>> UpdateServicesWithLatestData(int newBatchId)
     {
       try
       {
@@ -69,6 +69,11 @@ namespace missinglink.Services
           }
         });
 
+        if (allServices.Count > 0)
+        {
+          await _metlinkServiceRepository.AddServicesAsync(allServices);
+        }
+
         return allServices;
       }
       catch (Exception ex)
@@ -76,6 +81,31 @@ namespace missinglink.Services
         _logger.LogError(ex, "An error occurred while retrieving service updates.");
         throw;
       }
+    }
+
+    public async Task<ServiceStatistic> UpdateStatisticsWithLatestServices(List<MetlinkService> allServices, int newBatchId)
+    {
+      var newServiceStatistic = new ServiceStatistic();
+
+      if (allServices == null)
+      {
+        throw new ArgumentException("The service table must be empty");
+      }
+
+      newServiceStatistic.DelayedServices = allServices.Where(service => service.Status == "LATE").Count();
+      newServiceStatistic.EarlyServices = allServices.Where(service => service.Status == "EARLY").Count();
+      newServiceStatistic.NotReportingTimeServices = allServices.Where(service => service.Status == "UNKNOWN").Count();
+      newServiceStatistic.OnTimeServices = allServices.Where(service => service.Status == "ONTIME").Count();
+      newServiceStatistic.CancelledServices = allServices.Where(service => service.Status == "CANCELLED").Count();
+      newServiceStatistic.TotalServices = allServices.Where(service => service.Status != "CANCELLED").Count();
+      DateTime utcTime = DateTime.UtcNow;
+      TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
+      DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
+      newServiceStatistic.Timestamp = currentDateTime;
+      newServiceStatistic.BatchId = newBatchId;
+
+      await _metlinkServiceRepository.AddStatisticAsync(newServiceStatistic);
+      return newServiceStatistic;
     }
 
     public async Task<int> GenerateNewBatchId()
@@ -332,16 +362,6 @@ namespace missinglink.Services
     public IEnumerable<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
     {
       return _metlinkServiceRepository.GetServiceStatisticsByDate(startDate, endDate);
-    }
-
-    public Task AddStatisticAsync(ServiceStatistic statistic)
-    {
-      return _metlinkServiceRepository.AddStatisticAsync(statistic);
-    }
-
-    public Task AddServicesAsync(List<MetlinkService> services)
-    {
-      return _metlinkServiceRepository.AddServicesAsync(services);
     }
 
     public void DeleteAllServices()

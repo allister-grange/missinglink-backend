@@ -15,37 +15,39 @@ namespace missinglink.Controllers
   public class MetlinkServicesController : ControllerBase
   {
     private readonly ILogger<MetlinkServicesController> _logger;
-    private readonly MetlinkAPIService _MetlinkAPIService;
+    private readonly MetlinkAPIService _metlinkAPIService;
     public MetlinkServicesController(ILogger<MetlinkServicesController> logger, ServiceContext ServiceContext,
       MetlinkAPIService MetlinkAPIService)
     {
       _logger = logger;
-      _MetlinkAPIService = MetlinkAPIService;
+      _metlinkAPIService = MetlinkAPIService;
     }
 
-    [HttpGet("updates")]
-    public async Task<IEnumerable<MetlinkService>> GetServiceTripUpdates()
+    [HttpGet("services")]
+    public async Task<IEnumerable<MetlinkService>> GetNewestServices()
     {
-      var services = await _MetlinkAPIService.GetLatestServices();
+      _logger.LogInformation("Fetching services request");
+      var services = await _metlinkAPIService.GetLatestServices();
 
       if (services == null || services.Count() == 0)
       {
         throw new Exception("Services table in database not populated.");
       }
 
+      _logger.LogInformation("Found " + services.Count() + " services");
       return services;
     }
 
     [HttpGet("statistics")]
-    public IActionResult GetServiceStatistics(string startDate, string endDate)
+    public IActionResult GetServiceStatisticsByDate(string startDate, string endDate)
     {
 
-      _logger.LogInformation("passed in dates: " + startDate + " " + endDate);
+      _logger.LogInformation("Fetching statistics with startDate of: " + startDate + " and endDate of:" + endDate);
       IEnumerable<ServiceStatistic> stats = null;
 
       if (String.IsNullOrEmpty(startDate) || String.IsNullOrEmpty(endDate))
       {
-        return BadRequest();
+        return BadRequest("You must provide a startState and endData query string");
       }
 
       DateTime startDateInput;
@@ -56,52 +58,41 @@ namespace missinglink.Controllers
         startDateInput = DateTime.Parse(startDate);
         endDateInput = DateTime.Parse(endDate);
 
-        stats = _MetlinkAPIService.GetServiceStatisticsByDate(startDateInput, endDateInput);
+        stats = _metlinkAPIService.GetServiceStatisticsByDate(startDateInput, endDateInput);
       }
       catch (System.FormatException e)
       {
         _logger.LogError($"Your date inputs were formatted incorrectly {e.ToString()}");
-        throw new ArgumentException("Your date inputs were formatted incorrectly");
+        return BadRequest("Your date inputs were formatted incorrectly");
       }
       _logger.LogInformation("Parsed dates: " + startDateInput + " " + endDateInput);
       if (stats == null || stats.Count() == 0)
       {
-        throw new Exception("ServiceStatistic table in database not populated. Try calling UpdateServiceStatistics.");
+        throw new Exception("ServiceStatistic table in database not populated.");
       }
 
       return Ok(stats);
     }
 
-    [HttpPost("statistics")]
-    public async Task<ActionResult> UpdateServiceStatistics()
+    [HttpPost("update")]
+    public async Task<ActionResult> UpdateServices()
     {
-      var newBatchId = await _MetlinkAPIService.GenerateNewBatchId();
-      var allServices = await _MetlinkAPIService.GetServicesUpdates(newBatchId);
-      if (allServices.Count > 0)
+      try
       {
-        await _MetlinkAPIService.AddServicesAsync(allServices);
+        // generate a new batch ID for these services
+        var newBatchId = await _metlinkAPIService.GenerateNewBatchId();
+
+        // update the services table
+        var allServices = await _metlinkAPIService.UpdateServicesWithLatestData(newBatchId);
+
+        // update the statistics table with the new services
+        var allStatistics = await _metlinkAPIService.UpdateStatisticsWithLatestServices(allServices, newBatchId);
+      }
+      catch (System.Exception e)
+      {
+        throw new Exception("Failed to update services: " + e);
       }
 
-      var newServiceStatistic = new ServiceStatistic();
-
-      if (allServices == null)
-      {
-        return NotFound("The service table must be empty");
-      }
-
-      newServiceStatistic.DelayedServices = allServices.Where(service => service.Status == "LATE").Count();
-      newServiceStatistic.EarlyServices = allServices.Where(service => service.Status == "EARLY").Count();
-      newServiceStatistic.NotReportingTimeServices = allServices.Where(service => service.Status == "UNKNOWN").Count();
-      newServiceStatistic.OnTimeServices = allServices.Where(service => service.Status == "ONTIME").Count();
-      newServiceStatistic.CancelledServices = allServices.Where(service => service.Status == "CANCELLED").Count();
-      newServiceStatistic.TotalServices = allServices.Where(service => service.Status != "CANCELLED").Count();
-      DateTime utcTime = DateTime.UtcNow;
-      TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
-      DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
-      newServiceStatistic.Timestamp = currentDateTime;
-      newServiceStatistic.BatchId = newBatchId;
-
-      await _MetlinkAPIService.AddStatisticAsync(newServiceStatistic);
       return Ok();
     }
   }
