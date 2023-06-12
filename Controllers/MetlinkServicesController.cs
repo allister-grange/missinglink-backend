@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using missinglink.Contexts;
 using missinglink.Models;
 using missinglink.Services;
 
@@ -16,11 +15,11 @@ namespace missinglink.Controllers
   {
     private readonly ILogger<MetlinkServicesController> _logger;
     private readonly MetlinkAPIService _metlinkAPIService;
-    public MetlinkServicesController(ILogger<MetlinkServicesController> logger, ServiceContext ServiceContext,
-      MetlinkAPIService MetlinkAPIService)
+    public MetlinkServicesController(ILogger<MetlinkServicesController> logger,
+      MetlinkAPIService metlinkAPIService)
     {
       _logger = logger;
-      _metlinkAPIService = MetlinkAPIService;
+      _metlinkAPIService = metlinkAPIService;
     }
 
     [HttpGet("services")]
@@ -83,7 +82,12 @@ namespace missinglink.Controllers
         var newBatchId = await _metlinkAPIService.GenerateNewBatchId();
 
         // update the services table
-        var allServices = await _metlinkAPIService.UpdateServicesWithLatestData(newBatchId);
+        var allServices = await _metlinkAPIService.GetLatestServiceDataFromMetlink();
+
+        // update the services with the new batchId
+        allServices.ForEach((service) => service.BatchId = newBatchId);
+
+        await _metlinkAPIService.UpdateServicesWithLatestData(allServices);
 
         // update the statistics table with the new services
         var allStatistics = await _metlinkAPIService.UpdateStatisticsWithLatestServices(allServices, newBatchId);

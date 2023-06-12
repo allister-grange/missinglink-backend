@@ -27,7 +27,7 @@ namespace missinglink.Services
       _metlinkServiceRepository = metlinkServiceRepository;
     }
 
-    public async Task<List<MetlinkService>> UpdateServicesWithLatestData(int newBatchId)
+    public async Task<List<MetlinkService>> GetLatestServiceDataFromMetlink()
     {
       try
       {
@@ -50,13 +50,12 @@ namespace missinglink.Services
         // todo this is bad practise (not cloning the array)
         UpdateServicesWithRoutesAndPositions(allServices, trips, routes, positions);
 
-        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancelledServices, routes, newBatchId);
+        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancelledServices, routes);
 
         allServices.AddRange(cancelledServicesToBeAdded);
 
         allServices.ForEach((service) =>
         {
-          service.BatchId = newBatchId;
           service.ProviderId = "Metlink";
           service.ServiceName = service.RouteShortName;
           if (int.TryParse(service.RouteShortName, out _))
@@ -69,17 +68,25 @@ namespace missinglink.Services
           }
         });
 
-        if (allServices.Count > 0)
-        {
-          await _metlinkServiceRepository.AddServicesAsync(allServices);
-        }
-
         return allServices;
       }
       catch (Exception ex)
       {
         _logger.LogError(ex, "An error occurred while retrieving service updates.");
         throw;
+      }
+
+    }
+    public async Task UpdateServicesWithLatestData(List<MetlinkService> allServices)
+    {
+      try
+      {
+        await _metlinkServiceRepository.AddServicesAsync(allServices);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "An error occurred while updates services in the db");
+        throw ex;
       }
     }
 
@@ -114,7 +121,7 @@ namespace missinglink.Services
       return lastBatchId + 1;
     }
 
-    private List<MetlinkService> GetCancelledServicesToBeAdded(List<MetlinkCancellationResponse> cancelledServices, List<MetlinkRouteResponse> routes, int newBatchId)
+    private List<MetlinkService> GetCancelledServicesToBeAdded(List<MetlinkCancellationResponse> cancelledServices, List<MetlinkRouteResponse> routes)
     {
       var cancelledServicesToBeAdded = new List<MetlinkService>();
 
@@ -226,7 +233,7 @@ namespace missinglink.Services
         }
         else
         {
-          Console.WriteLine("Error in GetServicesFromStopId");
+          _logger.LogError("Error making API call to: GetServicesFromStopId");
         }
 
         return res;
@@ -251,7 +258,7 @@ namespace missinglink.Services
         }
         else
         {
-          Console.WriteLine("Error in GetTripUpdates");
+          _logger.LogError("Error making API call to: GetTripUpdates");
         }
 
         return res.Trips;
@@ -276,7 +283,7 @@ namespace missinglink.Services
         }
         else
         {
-          Console.WriteLine("Error in GetVehiclePositions");
+          _logger.LogError("Error making API call to: GetVehiclePositions");
         }
 
         return res.VehiclePositions;
@@ -309,7 +316,7 @@ namespace missinglink.Services
         }
         else
         {
-          Console.WriteLine("Error in GetTrips");
+          _logger.LogError("Error making API call to: GetTrips");
         }
 
         return res;
@@ -334,7 +341,7 @@ namespace missinglink.Services
         }
         else
         {
-          Console.WriteLine("Error in GetTrips");
+          _logger.LogError("Error making API call to: GetRoutes");
         }
 
         return res;
@@ -350,7 +357,6 @@ namespace missinglink.Services
       try
       {
         var batchId = await _metlinkServiceRepository.GetLatestBatchId();
-        Console.WriteLine(batchId);
         return _metlinkServiceRepository.GetByBatchId(batchId);
       }
       catch

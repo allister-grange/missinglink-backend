@@ -38,6 +38,8 @@ namespace missinglink
       services.AddScoped<MetlinkAPIService>();
 
       services.AddControllers();
+
+      services.AddSingleton<MetlinkServiceHub>();
       services.AddSignalR();
     }
 
@@ -78,10 +80,10 @@ namespace missinglink
       app.UseEndpoints(endpoints =>
       {
         endpoints.MapControllers();
-        endpoints.MapHub<MetlinkServicesHub>("/serviceshub", options =>
-        {
-          options.Transports = HttpTransportType.ServerSentEvents;
-        });
+        endpoints.MapHub<MetlinkServiceHub>("/serviceshub", options =>
+      {
+        options.Transports = HttpTransportType.ServerSentEvents;
+      });
       });
 
     }
