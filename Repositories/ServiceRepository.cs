@@ -6,45 +6,45 @@ using System.Linq; // Add this namespace
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
-namespace missinglink.Metlink.Repository
+namespace missinglink.Repository
 {
-  public class MetlinkServiceRepository : IMetlinkServiceRepository
+  public class ServiceRepository : IServiceRepository
   {
     private readonly ServiceContext _dbContext;
 
-    public MetlinkServiceRepository(ServiceContext dbContext)
+    public ServiceRepository(ServiceContext dbContext)
     {
       _dbContext = dbContext;
     }
 
-    public MetlinkService GetById(int id)
+    public Service GetById(int id)
     {
       return _dbContext.Services.Find(id);
     }
 
-    public List<MetlinkService> GetByBatchId(int batchId)
+    public List<Service> GetByBatchId(int batchId)
     {
       return _dbContext.Services.Where((service) => service.BatchId == batchId).ToList();
     }
 
-    public IEnumerable<MetlinkService> GetAll()
+    public IEnumerable<Service> GetAll()
     {
       return _dbContext.Services;
     }
 
-    public void Add(MetlinkService service)
+    public void Add(Service service)
     {
       _dbContext.Services.Add(service);
       _dbContext.SaveChanges();
     }
 
-    public void Update(MetlinkService service)
+    public void Update(Service service)
     {
       _dbContext.Services.Update(service);
       _dbContext.SaveChanges();
     }
 
-    public void Delete(MetlinkService service)
+    public void Delete(Service service)
     {
       _dbContext.Services.Remove(service);
       _dbContext.SaveChanges();
@@ -63,7 +63,7 @@ namespace missinglink.Metlink.Repository
       await _dbContext.SaveChangesAsync();
     }
 
-    public async Task AddServicesAsync(List<MetlinkService> services)
+    public async Task AddServicesAsync(List<Service> services)
     {
       await _dbContext.Services.AddRangeAsync(services);
       await _dbContext.SaveChangesAsync();

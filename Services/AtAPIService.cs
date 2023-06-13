@@ -12,22 +12,22 @@ using missinglink.Repository;
 
 namespace missinglink.Services
 {
-  public class MetlinkAPIService
+  public class AtAPIService
   {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<MetlinkAPIService> _logger;
-    private readonly IServiceRepository _metlinkServiceRepository;
+    private readonly ILogger<AtAPIService> _logger;
+    private readonly IServiceRepository _serviceRepository;
 
-    public MetlinkAPIService(ILogger<MetlinkAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository metlinkServiceRepository)
+    public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository serviceRepository)
     {
-      _httpClient = clientFactory.CreateClient("metlinkService");
+      _httpClient = clientFactory.CreateClient("AService");
       _configuration = configuration;
       _logger = logger;
-      _metlinkServiceRepository = metlinkServiceRepository;
+      _serviceRepository = serviceRepository;
     }
 
-    public async Task<List<Service>> GetLatestServiceDataFromMetlink()
+    public async Task<List<Service>> GetLatestServiceDataFromAT()
     {
       try
       {
@@ -35,28 +35,28 @@ namespace missinglink.Services
         var tripsTask = GetTrips();
         var routesTask = GetRoutes();
         var positionsTask = GetVehiclePositions();
-        var cancelledServicesTask = GetCancelledServicesFromMetlink();
+        // var cancelledServicesTask = GetCancelledServicesFromAT();
 
-        await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask, cancelledServicesTask);
+        await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask);
 
         var tripUpdates = await tripUpdatesTask;
         var trips = await tripsTask;
         var routes = await routesTask;
         var positions = await positionsTask;
-        var cancelledServices = await cancelledServicesTask;
+        // var cancelledServices = await cancelledServicesTask;
 
-        var allServices = await ParseServicesFromTripUpdates(tripUpdates);
+        var allServices = ParseServicesFromTripUpdates(tripUpdates);
 
         // todo this is bad practise (not cloning the array)
         UpdateServicesWithRoutesAndPositions(allServices, trips, routes, positions);
 
-        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancelledServices, routes);
+        // var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancelledServices, routes);
 
-        allServices.AddRange(cancelledServicesToBeAdded);
+        // allServices.AddRange(cancelledServicesToBeAdded);
 
         allServices.ForEach((service) =>
         {
-          service.ProviderId = "Metlink";
+          service.ProviderId = "AT";
           service.ServiceName = service.RouteShortName;
           if (int.TryParse(service.RouteShortName, out _))
           {
@@ -81,7 +81,7 @@ namespace missinglink.Services
     {
       try
       {
-        await _metlinkServiceRepository.AddServicesAsync(allServices);
+        await _serviceRepository.AddServicesAsync(allServices);
       }
       catch (Exception ex)
       {
@@ -111,45 +111,45 @@ namespace missinglink.Services
       newServiceStatistic.Timestamp = currentDateTime;
       newServiceStatistic.BatchId = newBatchId;
 
-      await _metlinkServiceRepository.AddStatisticAsync(newServiceStatistic);
+      await _serviceRepository.AddStatisticAsync(newServiceStatistic);
       return newServiceStatistic;
     }
 
     public async Task<int> GenerateNewBatchId()
     {
-      int lastBatchId = await _metlinkServiceRepository.GetLatestBatchId();
+      int lastBatchId = await _serviceRepository.GetLatestBatchId();
       return lastBatchId + 1;
     }
 
-    private List<Service> GetCancelledServicesToBeAdded(List<MetlinkCancellationResponse> cancelledServices, List<RouteResponse> routes)
-    {
-      var cancelledServicesToBeAdded = new List<Service>();
+    // private List<Service> GetCancelledServicesToBeAdded(List<MetlinkCancellationResponse> cancelledServices, List<RouteResponse> routes)
+    // {
+    //   var cancelledServicesToBeAdded = new List<Service>();
 
-      foreach (var cancellation in cancelledServices)
-      {
-        var route = routes.Find(route => route.RouteId == cancellation.RouteId);
+    //   foreach (var cancellation in cancelledServices)
+    //   {
+    //     var route = routes.Find(route => route.RouteId == cancellation.RouteId);
 
-        if (route != null)
-        {
-          var cancelledService = new Service()
-          {
-            Status = "CANCELLED",
-            TripId = cancellation.TripId,
-            RouteId = route.RouteId,
-            RouteDescription = route.RouteDesc,
-            RouteShortName = route.RouteShortName,
-            RouteLongName = route.RouteLongName,
-          };
+    //     if (route != null)
+    //     {
+    //       var cancelledService = new Service()
+    //       {
+    //         Status = "CANCELLED",
+    //         TripId = cancellation.TripId,
+    //         RouteId = route.RouteId,
+    //         RouteDescription = route.RouteDesc,
+    //         RouteShortName = route.RouteShortName,
+    //         RouteLongName = route.RouteLongName,
+    //       };
 
-          cancelledServicesToBeAdded.Add(cancelledService);
-        }
-      }
+    //       cancelledServicesToBeAdded.Add(cancelledService);
+    //     }
+    //   }
 
-      return cancelledServicesToBeAdded;
-    }
+    //   return cancelledServicesToBeAdded;
+    // }
 
 
-    private async Task<List<Service>> ParseServicesFromTripUpdates(List<TripUpdateHolder> tripUpdates)
+    private List<Service> ParseServicesFromTripUpdates(List<TripUpdateHolder> tripUpdates)
     {
       List<Service> allServices = new List<Service>();
 
@@ -186,7 +186,8 @@ namespace missinglink.Services
       return allServices;
     }
 
-    private void UpdateServicesWithRoutesAndPositions(List<Service> services, List<MetlinkTripResponse> trips, List<RouteResponse> routes, List<VehiclePositionHolder> positions)
+    private void UpdateServicesWithRoutesAndPositions(List<Service> services, List<MetlinkTripResponse> trips,
+      List<RouteResponse> routes, List<VehiclePositionHolder> positions)
     {
       foreach (var service in services)
       {
@@ -219,36 +220,36 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<MetlinkCancellationResponse>> GetCancelledServicesFromMetlink()
-    {
-      try
-      {
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/trip-cancellations");
-        List<MetlinkCancellationResponse> res = null;
+    // public async Task<List<MetlinkCancellationResponse>> GetCancelledServicesFromAT()
+    // {
+    //   try
+    //   {
+    //     var response = await MakeAPIRequest("https://api.opendata.A.org.nz/v1/trip-cancellations");
+    //     List<MetlinkCancellationResponse> res = null;
 
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<List<MetlinkCancellationResponse>>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetServicesFromStopId");
-        }
+    //     if (response.IsSuccessStatusCode)
+    //     {
+    //       var responseStream = await response.Content.ReadAsStringAsync();
+    //       res = JsonConvert.DeserializeObject<List<MetlinkCancellationResponse>>(responseStream);
+    //     }
+    //     else
+    //     {
+    //       _logger.LogError("Error making API call to: GetServicesFromStopId");
+    //     }
 
-        return res;
-      }
-      catch
-      {
-        throw;
-      }
-    }
+    //     return res;
+    //   }
+    //   catch
+    //   {
+    //     throw;
+    //   }
+    // }
 
     public async Task<List<TripUpdateHolder>> GetTripUpdates()
     {
       try
       {
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs-rt/tripupdates");
+        var response = await MakeAPIRequest("https://api.at.govt.nz/realtime/legacy/tripupdates");
         TripUpdatesResponse res = new TripUpdatesResponse();
 
         if (response.IsSuccessStatusCode)
@@ -273,7 +274,7 @@ namespace missinglink.Services
     {
       try
       {
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs-rt/vehiclepositions");
+        var response = await MakeAPIRequest("https://api.at.govt.nz/realtime/legacy/vehiclelocations");
         VehiclePositionResponse res = new VehiclePositionResponse();
 
         if (response.IsSuccessStatusCode)
@@ -294,44 +295,44 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<MetlinkTripResponse>> GetTrips()
-    {
-      try
-      {
-        DateTime utcTime = DateTime.UtcNow;
-        TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
-        DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
+    // public async Task<List<ATripResponse>> GetTrips()
+    // {
+    //   try
+    //   {
+    //     DateTime utcTime = DateTime.UtcNow;
+    //     TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
+    //     DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
 
-        string startDate = currentDateTime.ToString("yyyy-MM-dd") + "T00%3A00%3A00";
-        string endDate = currentDateTime.ToString("yyyy-MM-dd") + "T23%3A59%3A59";
-        string query = "?start=" + startDate + "&end=" + endDate;
+    //     string startDate = currentDateTime.ToString("yyyy-MM-dd") + "T00%3A00%3A00";
+    //     string endDate = currentDateTime.ToString("yyyy-MM-dd") + "T23%3A59%3A59";
+    //     string query = "?start=" + startDate + "&end=" + endDate;
 
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs/trips" + query);
-        List<MetlinkTripResponse> res = new List<MetlinkTripResponse>();
+    //     var response = await MakeAPIRequest("https://api.opendata.A.org.nz/v1/gtfs/trips" + query);
+    //     List<ATripResponse> res = new List<ATripResponse>();
 
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<List<MetlinkTripResponse>>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetTrips");
-        }
+    //     if (response.IsSuccessStatusCode)
+    //     {
+    //       var responseStream = await response.Content.ReadAsStringAsync();
+    //       res = JsonConvert.DeserializeObject<List<ATripResponse>>(responseStream);
+    //     }
+    //     else
+    //     {
+    //       _logger.LogError("Error making API call to: GetTrips");
+    //     }
 
-        return res;
-      }
-      catch
-      {
-        throw;
-      }
-    }
+    //     return res;
+    //   }
+    //   catch
+    //   {
+    //     throw;
+    //   }
+    // }
 
     public async Task<List<RouteResponse>> GetRoutes()
     {
       try
       {
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs/routes");
+        var response = await MakeAPIRequest("https://api.at.govt.nz/gtfs/v3/routes");
         List<RouteResponse> res = new List<RouteResponse>();
 
         if (response.IsSuccessStatusCode)
@@ -356,8 +357,8 @@ namespace missinglink.Services
     {
       try
       {
-        var batchId = await _metlinkServiceRepository.GetLatestBatchId();
-        return _metlinkServiceRepository.GetByBatchId(batchId);
+        var batchId = await _serviceRepository.GetLatestBatchId();
+        return _serviceRepository.GetByBatchId(batchId);
       }
       catch
       {
@@ -367,12 +368,12 @@ namespace missinglink.Services
 
     public IEnumerable<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
     {
-      return _metlinkServiceRepository.GetServiceStatisticsByDate(startDate, endDate);
+      return _serviceRepository.GetServiceStatisticsByDate(startDate, endDate);
     }
 
     public void DeleteAllServices()
     {
-      _metlinkServiceRepository.DeleteAllServices();
+      _serviceRepository.DeleteAllServices();
     }
 
     private async Task<HttpResponseMessage> MakeAPIRequest(string url)
@@ -383,7 +384,7 @@ namespace missinglink.Services
         var request = new HttpRequestMessage(
           HttpMethod.Get, url);
         request.Headers.Add("Accept", "application/json");
-        request.Headers.Add("x-api-key", _configuration.GetConnectionString("MetlinkAPIKey"));
+        request.Headers.Add("x-api-key", _configuration.GetConnectionString("AtAPIKey"));
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
@@ -395,7 +396,7 @@ namespace missinglink.Services
         attempts--;
       }
 
-      throw new Exception("Couldn't get a 200 from Metlink's API");
+      throw new Exception("Couldn't get a 200 from A's API");
     }
 
   }

@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace missinglink.Models
 {
-  public class MetlinkService
+  public class Service
   {
 
     [Key]

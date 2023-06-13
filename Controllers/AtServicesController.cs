@@ -10,12 +10,12 @@ using missinglink.Services;
 namespace missinglink.Controllers
 {
   [ApiController]
-  [Route("api/v1")]
-  public class MetlinkServicesController : ControllerBase
+  [Route("api/v1/at")]
+  public class AtServicesController : ControllerBase
   {
-    private readonly ILogger<MetlinkServicesController> _logger;
+    private readonly ILogger<AtServicesController> _logger;
     private readonly MetlinkAPIService _metlinkAPIService;
-    public MetlinkServicesController(ILogger<MetlinkServicesController> logger,
+    public AtServicesController(ILogger<AtServicesController> logger,
       MetlinkAPIService metlinkAPIService)
     {
       _logger = logger;

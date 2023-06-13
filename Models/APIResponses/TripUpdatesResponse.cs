@@ -81,7 +81,7 @@ namespace missinglink.Models
     public string Id { get; set; }
   }
 
-  public class MetlinkTripUpdatesResponse
+  public class TripUpdatesResponse
   {
     [JsonProperty("header")]
     public Header Header { get; set; }
