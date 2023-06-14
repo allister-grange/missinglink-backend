@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using missinglink.Models;
-using missinglink.Models.VehiclePositions;
+using missinglink.Models.Metlink;
+using missinglink.Models.Metlink.VehiclePosition;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
 using missinglink.Repository;
+using missinglink.Models;
 
 namespace missinglink.Services
 {
@@ -76,49 +77,6 @@ namespace missinglink.Services
         throw;
       }
 
-    }
-    public async Task UpdateServicesWithLatestData(List<Service> allServices)
-    {
-      try
-      {
-        await _metlinkServiceRepository.AddServicesAsync(allServices);
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "An error occurred while updates services in the db");
-        throw ex;
-      }
-    }
-
-    public async Task<ServiceStatistic> UpdateStatisticsWithLatestServices(List<Service> allServices, int newBatchId)
-    {
-      var newServiceStatistic = new ServiceStatistic();
-
-      if (allServices == null)
-      {
-        throw new ArgumentException("The service table must be empty");
-      }
-
-      newServiceStatistic.DelayedServices = allServices.Where(service => service.Status == "LATE").Count();
-      newServiceStatistic.EarlyServices = allServices.Where(service => service.Status == "EARLY").Count();
-      newServiceStatistic.NotReportingTimeServices = allServices.Where(service => service.Status == "UNKNOWN").Count();
-      newServiceStatistic.OnTimeServices = allServices.Where(service => service.Status == "ONTIME").Count();
-      newServiceStatistic.CancelledServices = allServices.Where(service => service.Status == "CANCELLED").Count();
-      newServiceStatistic.TotalServices = allServices.Where(service => service.Status != "CANCELLED").Count();
-      DateTime utcTime = DateTime.UtcNow;
-      TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
-      DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
-      newServiceStatistic.Timestamp = currentDateTime;
-      newServiceStatistic.BatchId = newBatchId;
-
-      await _metlinkServiceRepository.AddStatisticAsync(newServiceStatistic);
-      return newServiceStatistic;
-    }
-
-    public async Task<int> GenerateNewBatchId()
-    {
-      int lastBatchId = await _metlinkServiceRepository.GetLatestBatchId();
-      return lastBatchId + 1;
     }
 
     private List<Service> GetCancelledServicesToBeAdded(List<MetlinkCancellationResponse> cancelledServices, List<RouteResponse> routes)
@@ -249,12 +207,12 @@ namespace missinglink.Services
       try
       {
         var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs-rt/tripupdates");
-        TripUpdatesResponse res = new TripUpdatesResponse();
+        MetlinkTripUpdatesResponse res = new MetlinkTripUpdatesResponse();
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<TripUpdatesResponse>(responseStream);
+          res = JsonConvert.DeserializeObject<MetlinkTripUpdatesResponse>(responseStream);
         }
         else
         {
@@ -368,11 +326,6 @@ namespace missinglink.Services
     public IEnumerable<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
     {
       return _metlinkServiceRepository.GetServiceStatisticsByDate(startDate, endDate);
-    }
-
-    public void DeleteAllServices()
-    {
-      _metlinkServiceRepository.DeleteAllServices();
     }
 
     private async Task<HttpResponseMessage> MakeAPIRequest(string url)

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace missinglink.Models
+namespace missinglink.Models.Metlink
 {
 
   public class Header
@@ -81,7 +81,7 @@ namespace missinglink.Models
     public string Id { get; set; }
   }
 
-  public class TripUpdatesResponse
+  public class MetlinkTripUpdatesResponse
   {
     [JsonProperty("header")]
     public Header Header { get; set; }

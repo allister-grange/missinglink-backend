@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace missinglink.Models.VehiclePositions
+namespace missinglink.Models.Metlink.VehiclePosition
 {
 
   public class Header
@@ -49,7 +49,7 @@ namespace missinglink.Models.VehiclePositions
     public double Longitude { get; set; }
   }
 
-  public class VehiclePostionId
+  public class VehiclePositionId
   {
     [JsonProperty("id")]
     public string Id { get; set; }
@@ -67,7 +67,7 @@ namespace missinglink.Models.VehiclePositions
     public Position Position { get; set; }
 
     [JsonProperty("vehicle")]
-    public VehiclePostionId Vehicle { get; set; }
+    public VehiclePositionId Vehicle { get; set; }
 
     [JsonProperty("timestamp")]
     public int Timestamp { get; set; }

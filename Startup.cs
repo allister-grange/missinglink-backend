@@ -35,7 +35,9 @@ namespace missinglink
         options.UseNpgsql(Configuration.GetConnectionString("Postgres")));
 
       services.AddScoped<IServiceRepository, ServiceRepository>();
+
       services.AddScoped<MetlinkAPIService>();
+      services.AddScoped<AtAPIService>();
 
       services.AddControllers();
 

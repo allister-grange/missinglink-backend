@@ -73,31 +73,5 @@ namespace missinglink.Controllers
       return Ok(stats);
     }
 
-    [HttpPost("update")]
-    public async Task<ActionResult> UpdateServices()
-    {
-      try
-      {
-        // generate a new batch ID for these services
-        var newBatchId = await _metlinkAPIService.GenerateNewBatchId();
-
-        // update the services table
-        var allServices = await _metlinkAPIService.GetLatestServiceDataFromMetlink();
-
-        // update the services with the new batchId
-        allServices.ForEach((service) => service.BatchId = newBatchId);
-
-        await _metlinkAPIService.UpdateServicesWithLatestData(allServices);
-
-        // update the statistics table with the new services
-        var allStatistics = await _metlinkAPIService.UpdateStatisticsWithLatestServices(allServices, newBatchId);
-      }
-      catch (System.Exception e)
-      {
-        throw new Exception("Failed to update services: " + e);
-      }
-
-      return Ok();
-    }
   }
 }
