@@ -38,6 +38,7 @@ namespace missinglink
 
       services.AddScoped<MetlinkAPIService>();
       services.AddScoped<AtAPIService>();
+      services.AddScoped<ServiceAPI>();
 
       services.AddControllers();
 

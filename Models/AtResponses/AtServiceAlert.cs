@@ -73,6 +73,15 @@ namespace missinglink.Models.AT.ServiceAlert
   {
     [JsonProperty("stop_id")]
     public string StopId { get; set; }
+
+    [JsonProperty("trip")]
+    public InformedIdentityTrip Trip { get; set; }
+  }
+
+  public class InformedIdentityTrip
+  {
+    [JsonProperty("trip_id")]
+    public string TripId { get; set; }
   }
 
   public class Response

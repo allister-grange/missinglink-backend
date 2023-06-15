@@ -54,15 +54,15 @@ namespace missinglink.Services
 
         var allServices = ParseATResponsesIntoServices(tripUpdates, positions, routes);
 
-        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancellations, routes);
+        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancellations, routes, tripUpdates);
 
-        // allServices.AddRange(cancelledServicesToBeAdded);
+        allServices.AddRange(cancelledServicesToBeAdded);
 
         return allServices;
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "An error occurred while retrieving service updates.");
+        _logger.LogError(ex, "An error occurred while retrieving service updates for AT.");
         throw;
       }
 
@@ -118,28 +118,11 @@ namespace missinglink.Services
         {
           newService.Status = "ONTIME";
         }
+
         newService.ProviderId = "AT";
         newService.TripId = trip.Id;
         newService.VehicleId = trip.TripUpdate.Vehicle?.Id;
-
-        switch (routeForTrip.Attributes.RouteType)
-        {
-          case 3:
-            newService.VehicleType = "Bus";
-            break;
-          case 2:
-            newService.VehicleType = "Train";
-            break;
-          case 4:
-            newService.VehicleType = "Ferry";
-            break;
-          case 712:
-            newService.VehicleType = "Bus";
-            break;
-          default:
-            newService.VehicleType = "Bus";
-            break;
-        }
+        newService.VehicleType = GetVehicleType(routeForTrip.Attributes.RouteType);
 
         newServices.Add(newService);
       }
@@ -160,31 +143,76 @@ namespace missinglink.Services
     }
 
 
-    private List<Service> GetCancelledServicesToBeAdded(List<AtServiceAlert> cancelledServices, List<AtRouteResponse> routes)
+    private List<Service> GetCancelledServicesToBeAdded(List<ServiceAlertEntity> cancelledServices, List<Datum> routes, List<Entity> tripUpdates)
     {
       var cancelledServicesToBeAdded = new List<Service>();
 
       foreach (var cancellation in cancelledServices)
       {
-        var route = routes.Find(route => route.RouteId == cancellation.RouteId);
 
-        if (route != null)
+        if (cancellation.Alert.Effect != "NO_SERVICE")
         {
-          var cancelledService = new Service()
-          {
-            Status = "CANCELLED",
-            TripId = cancellation.TripId,
-            RouteId = route.RouteId,
-            RouteDescription = route.RouteDesc,
-            RouteShortName = route.RouteShortName,
-            RouteLongName = route.RouteLongName,
-          };
-
-          cancelledServicesToBeAdded.Add(cancelledService);
+          continue;
         }
+
+        var tripUpdateId = cancellation.Alert.InformedEntity.FirstOrDefault(informedEntity => informedEntity.Trip?.TripId != null);
+
+        if (tripUpdateId == null)
+        {
+          continue;
+        }
+
+        // make sure the active period matches the current time.....
+
+        var trip = tripUpdates.Find(trip => trip.TripUpdate.Trip.TripId == tripUpdateId.Trip.TripId);
+
+        if (trip == null)
+        {
+          Console.WriteLine("Found a cancellation with a tripID that isn't in the tripupdates for AT");
+          continue;
+        }
+
+        var route = routes.Find(route => route.Id == trip.TripUpdate.Trip.RouteId);
+
+        if (route == null)
+        {
+          Console.WriteLine("Found a route with an that isn't in the tripupdates for AT");
+          continue;
+        }
+
+        var cancelledService = new Service()
+        {
+          Status = "CANCELLED",
+          TripId = tripUpdateId.Trip.TripId,
+          RouteId = route.Id,
+          RouteDescription = route.Attributes.RouteLongName,
+          RouteShortName = route.Attributes.RouteShortName,
+          RouteLongName = route.Attributes.RouteLongName,
+          ProviderId = "AT",
+          VehicleType = GetVehicleType(route.Attributes.RouteType)
+        };
+
+        cancelledServicesToBeAdded.Add(cancelledService);
       }
 
       return cancelledServicesToBeAdded;
+    }
+
+    private string GetVehicleType(int routeType)
+    {
+      switch (routeType)
+      {
+        case 3:
+          return "Bus";
+        case 2:
+          return "Train";
+        case 4:
+          return "Ferry";
+        case 712:
+          return "Bus";
+        default:
+          return "Bus";
+      }
     }
 
     public async Task<List<Entity>> GetTripUpdates()
