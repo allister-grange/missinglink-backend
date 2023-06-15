@@ -53,13 +53,33 @@ namespace missinglink.Services
 
         tripUpdates.RemoveAll(trip => trip.TripUpdate == null);
 
-        var allServices = ParseATResponsesIntoServices(tripUpdates, positions, routes);
+        Console.WriteLine(tripUpdates.Count);
+        foreach (var cancellation in cancellations)
+        {
+          var tripUpdateId = cancellation.Alert.InformedEntity.FirstOrDefault(informedEntity => informedEntity.Trip?.TripId != null);
+
+          if (tripUpdateId == null)
+          {
+            continue;
+          }
+
+          tripUpdates.RemoveAll((trip) => trip.TripUpdate.Trip.TripId == tripUpdateId.Trip.TripId);
+        }
+        Console.WriteLine(tripUpdates.Count);
+
+        var allServicesParsed = ParseATResponsesIntoServices(tripUpdates, positions, routes);
+
 
         var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancellations, routes, tripUpdates);
 
-        allServices.AddRange(cancelledServicesToBeAdded);
+        allServicesParsed.AddRange(cancelledServicesToBeAdded);
 
-        return allServices;
+        // string json = JsonConvert.SerializeObject(allServicesParsed, Formatting.Indented);
+        // string filePath = "output.json";
+        // File.WriteAllText(filePath, json);
+
+
+        return allServicesParsed;
       }
       catch (Exception ex)
       {
@@ -88,10 +108,6 @@ namespace missinglink.Services
             return trip.TripUpdate.Trip.StartDate == formattedDate && trip.TripUpdate.Trip.StartTime.CompareTo(formattedTime) < 0;
           })
           .ToList();
-
-      string json = JsonConvert.SerializeObject(tripUpdatesOnlyToday, Formatting.Indented);
-      string filePath = "output.json";
-      File.WriteAllText(filePath, json);
 
       foreach (var trip in tripUpdatesOnlyToday)
       {
