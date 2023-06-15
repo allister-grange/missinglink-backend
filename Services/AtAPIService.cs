@@ -11,6 +11,7 @@ using missinglink.Models.AT;
 using System.Text.Json;
 using Newtonsoft.Json;
 using missinglink.Models.AT.ServiceAlert;
+using System.IO;
 
 namespace missinglink.Services
 {
@@ -65,16 +66,34 @@ namespace missinglink.Services
         _logger.LogError(ex, "An error occurred while retrieving service updates for AT.");
         throw;
       }
-
     }
 
     private List<Service> ParseATResponsesIntoServices(List<Entity> tripUpdates,
       List<PositionResponseEntity> positions, List<Datum> routes)
     {
+      TimeZoneInfo nzTimeZone = TimeZoneInfo.FindSystemTimeZoneById("New Zealand Standard Time");
+      DateTime nzDateTime = TimeZoneInfo.ConvertTime(DateTime.UtcNow, nzTimeZone);
+      string formattedDate = nzDateTime.ToString("yyyyMMdd");
+      string formattedTime = nzDateTime.ToString("HH:mm:ss");
 
       var newServices = new List<Service>();
 
-      foreach (var trip in tripUpdates)
+      var tripUpdatesWithUniqueVehicleIds = tripUpdates.GroupBy(e => e.TripUpdate?.Vehicle?.Id)
+            .Select(g => g.OrderByDescending(e => e.TripUpdate.Delay).First())
+            .ToList();
+
+      var tripUpdatesOnlyToday = tripUpdatesWithUniqueVehicleIds
+          .Where(trip =>
+          {
+            return trip.TripUpdate.Trip.StartDate == formattedDate && trip.TripUpdate.Trip.StartTime.CompareTo(formattedTime) < 0;
+          })
+          .ToList();
+
+      string json = JsonConvert.SerializeObject(tripUpdatesOnlyToday, Formatting.Indented);
+      string filePath = "output.json";
+      File.WriteAllText(filePath, json);
+
+      foreach (var trip in tripUpdatesOnlyToday)
       {
         var newService = new Service();
 

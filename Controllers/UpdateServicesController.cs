@@ -49,7 +49,7 @@ namespace missinglink.Controllers
 
         await _serviceAPI.UpdateServicesWithLatestData(allServices);
 
-        // // update the statistics table with the new services
+        // update the statistics table with the new services
         var allStatistics = await _serviceAPI.UpdateStatisticsWithLatestServices(allServices, newBatchId);
       }
       catch (System.Exception e)
