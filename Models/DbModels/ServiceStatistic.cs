@@ -1,13 +1,12 @@
 using System;
-using System.ComponentModel.DataAnnotations;
 
 namespace missinglink.Models
 {
   public class ServiceStatistic
   {
-
-    [Key]
     public int BatchId { get; set; }
+
+    public string ProviderId { get; set; }
 
     public int DelayedServices { get; set; }
 

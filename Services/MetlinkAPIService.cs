@@ -18,14 +18,14 @@ namespace missinglink.Services
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<MetlinkAPIService> _logger;
-    private readonly IServiceRepository _metlinkServiceRepository;
+    private readonly IServiceRepository _serviceRepository;
 
     public MetlinkAPIService(ILogger<MetlinkAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository metlinkServiceRepository)
     {
       _httpClient = clientFactory.CreateClient("metlinkService");
       _configuration = configuration;
       _logger = logger;
-      _metlinkServiceRepository = metlinkServiceRepository;
+      _serviceRepository = metlinkServiceRepository;
     }
 
     public async Task<List<Service>> GetLatestServiceDataFromMetlink()
@@ -117,7 +117,7 @@ namespace missinglink.Services
 
         service.VehicleId = trip.TripUpdate.Vehicle.Id;
         int delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
-        if (delay > 120)
+        if (delay > 150)
         {
           service.Status = "LATE";
         }
@@ -314,8 +314,8 @@ namespace missinglink.Services
     {
       try
       {
-        var batchId = await _metlinkServiceRepository.GetLatestBatchId();
-        return _metlinkServiceRepository.GetByBatchId(batchId);
+        var batchId = await _serviceRepository.GetLatestBatchId();
+        return _serviceRepository.GetByBatchIdAndProvider(batchId, "Metlink");
       }
       catch
       {
@@ -325,7 +325,7 @@ namespace missinglink.Services
 
     public IEnumerable<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
     {
-      return _metlinkServiceRepository.GetServiceStatisticsByDate(startDate, endDate);
+      return _serviceRepository.GetServiceStatisticsByDateAndProvider(startDate, endDate, "Metlink");
     }
 
     private async Task<HttpResponseMessage> MakeAPIRequest(string url)

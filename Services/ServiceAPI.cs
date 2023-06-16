@@ -55,7 +55,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<ServiceStatistic> UpdateStatisticsWithLatestServices(List<Service> allServices, int newBatchId)
+    public async Task UpdateStatisticsWithLatestServices(List<Service> allServices, int newBatchId)
     {
       var newServiceStatistic = new ServiceStatistic();
 
@@ -64,21 +64,24 @@ namespace missinglink.Services
         throw new ArgumentException("The service table must be empty");
       }
 
-      newServiceStatistic.DelayedServices = allServices.Where(service => service.Status == "LATE").Count();
-      newServiceStatistic.EarlyServices = allServices.Where(service => service.Status == "EARLY").Count();
-      newServiceStatistic.NotReportingTimeServices = allServices.Where(service => service.Status == "UNKNOWN").Count();
-      newServiceStatistic.OnTimeServices = allServices.Where(service => service.Status == "ONTIME").Count();
-      newServiceStatistic.CancelledServices = allServices.Where(service => service.Status == "CANCELLED").Count();
-      newServiceStatistic.TotalServices = allServices.Where(service => service.Status != "CANCELLED").Count();
-      DateTime utcTime = DateTime.UtcNow;
-      TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
-      DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
-      newServiceStatistic.Timestamp = currentDateTime;
-      newServiceStatistic.BatchId = newBatchId;
+      var providers = new string[] { "Metlink", "AT" };
 
-      await _serviceRepository.AddStatisticAsync(newServiceStatistic);
-      return newServiceStatistic;
+      foreach (var provider in providers)
+      {
+        newServiceStatistic.DelayedServices = allServices.Where(service => service.Status == "LATE" && service.ProviderId == provider).Count();
+        newServiceStatistic.EarlyServices = allServices.Where(service => service.Status == "EARLY" && service.ProviderId == provider).Count();
+        newServiceStatistic.NotReportingTimeServices = allServices.Where(service => service.Status == "UNKNOWN" && service.ProviderId == provider).Count();
+        newServiceStatistic.OnTimeServices = allServices.Where(service => service.Status == "ONTIME" && service.ProviderId == provider).Count();
+        newServiceStatistic.CancelledServices = allServices.Where(service => service.Status == "CANCELLED" && service.ProviderId == provider).Count();
+        newServiceStatistic.TotalServices = allServices.Where(service => service.Status != "CANCELLED" && service.ProviderId == provider).Count();
+        DateTime utcTime = DateTime.UtcNow;
+        TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
+        DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
+        newServiceStatistic.Timestamp = currentDateTime;
+        newServiceStatistic.BatchId = newBatchId;
+        newServiceStatistic.ProviderId = provider;
+        await _serviceRepository.AddStatisticAsync(newServiceStatistic);
+      }
     }
-
   }
 }

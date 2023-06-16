@@ -10,7 +10,7 @@ using missinglink.Services;
 namespace missinglink.Controllers
 {
   [ApiController]
-  [Route("api/v1")]
+  [Route("api/v1/metlink")]
   public class MetlinkServicesController : ControllerBase
   {
     private readonly ILogger<MetlinkServicesController> _logger;

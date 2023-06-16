@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using missinglink.Contexts;
 using missinglink.Models;
-using System.Linq; // Add this namespace
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,9 +27,15 @@ namespace missinglink.Repository
       return _dbContext.Services.Where((service) => service.BatchId == batchId).ToList();
     }
 
-    public IEnumerable<Service> GetAll()
+    public List<Service> GetByBatchIdAndProvider(int batchId, string serviceProviderId)
     {
-      return _dbContext.Services;
+      return _dbContext.Services.Where((service) => service.BatchId == batchId
+        && service.ProviderId == serviceProviderId).ToList();
+    }
+
+    public List<Service> GetAll()
+    {
+      return _dbContext.Services.ToList();
     }
 
     public void Add(Service service)
@@ -50,10 +56,20 @@ namespace missinglink.Repository
       _dbContext.SaveChanges();
     }
 
-    public IEnumerable<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
+    public List<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate,
+      DateTime endDate)
     {
       return _dbContext.ServiceStatistics
           .Where(stat => stat.Timestamp >= startDate && stat.Timestamp <= endDate)
+          .ToList();
+    }
+
+    public List<ServiceStatistic> GetServiceStatisticsByDateAndProvider(DateTime startDate,
+      DateTime endDate, string serviceProviderId)
+    {
+      return _dbContext.ServiceStatistics
+          .Where(stat => stat.Timestamp >= startDate && stat.Timestamp <= endDate
+            && stat.ProviderId == serviceProviderId)
           .ToList();
     }
 

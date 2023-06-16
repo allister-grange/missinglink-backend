@@ -16,7 +16,8 @@ namespace missinglink.Contexts
     {
       // Configure table names
       modelBuilder.Entity<Service>().ToTable("services");
-      modelBuilder.Entity<ServiceStatistic>().ToTable("service_statistics");
+      modelBuilder.Entity<ServiceStatistic>().ToTable("service_statistics")
+      .HasKey(m => new { m.BatchId, m.ProviderId });
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

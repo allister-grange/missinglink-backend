@@ -78,7 +78,6 @@ namespace missinglink.Services
         // string filePath = "output.json";
         // File.WriteAllText(filePath, json);
 
-
         return allServicesParsed;
       }
       catch (Exception ex)
@@ -137,7 +136,7 @@ namespace missinglink.Services
         }
 
         newService.Delay = trip.TripUpdate.Delay;
-        if (newService.Delay > 120)
+        if (newService.Delay > 150)
         {
           newService.Status = "LATE";
         }
@@ -384,12 +383,12 @@ namespace missinglink.Services
     }
 
     // todo the filtering here for only AT
-    public async Task<IEnumerable<Service>> GetLatestServices()
+    public async Task<List<Service>> GetLatestServices()
     {
       try
       {
         var batchId = await _serviceRepository.GetLatestBatchId();
-        return _serviceRepository.GetByBatchId(batchId);
+        return _serviceRepository.GetByBatchIdAndProvider(batchId, "AT");
       }
       catch
       {
@@ -397,11 +396,9 @@ namespace missinglink.Services
       }
     }
 
-    // todo the filtering here for only AT
-
-    public IEnumerable<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
+    public List<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
     {
-      return _serviceRepository.GetServiceStatisticsByDate(startDate, endDate);
+      return _serviceRepository.GetServiceStatisticsByDateAndProvider(startDate, endDate, "AT");
     }
 
     private async Task<HttpResponseMessage> MakeAPIRequest(string url)
