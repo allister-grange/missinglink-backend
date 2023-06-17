@@ -83,7 +83,11 @@ namespace missinglink
       app.UseEndpoints(endpoints =>
       {
         endpoints.MapControllers();
-        endpoints.MapHub<MetlinkServiceHub>("/serviceshub", options =>
+        endpoints.MapHub<MetlinkServiceHub>("/servicehub/metlink", options =>
+      {
+        options.Transports = HttpTransportType.ServerSentEvents;
+      });
+        endpoints.MapHub<AtServiceHub>("/servicehub/at", options =>
       {
         options.Transports = HttpTransportType.ServerSentEvents;
       });
