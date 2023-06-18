@@ -46,14 +46,21 @@ namespace missinglink.Services
 
         await Task.WhenAll(tripUpdatesTask, cancelledTask, positionsTask, routesTask);
 
-        var tripUpdates = await tripUpdatesTask;
-        var positions = await positionsTask;
-        var routes = await routesTask;
-        var cancellations = await cancelledTask;
+        var tripUpdates = tripUpdatesTask.Result;
+        var positions = positionsTask.Result;
+        var routes = routesTask.Result;
+        var cancellations = cancelledTask.Result;
 
         tripUpdates.RemoveAll(trip => trip.TripUpdate == null);
 
-        Console.WriteLine(tripUpdates.Count);
+        var allServicesParsed = ParseATResponsesIntoServices(tripUpdates, positions, routes);
+
+        // cancelled services are matched against the trip updates, so I'm only including 
+        // cancellations for current trips, not ones tomorrow etc
+        // this means I grab the cancellations, then I remove the trip updates so they're not 
+        // counted twice
+        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancellations, routes, tripUpdates);
+
         foreach (var cancellation in cancellations)
         {
           var tripUpdateId = cancellation.Alert.InformedEntity.FirstOrDefault(informedEntity => informedEntity.Trip?.TripId != null);
@@ -65,12 +72,6 @@ namespace missinglink.Services
 
           tripUpdates.RemoveAll((trip) => trip.TripUpdate.Trip.TripId == tripUpdateId.Trip.TripId);
         }
-        Console.WriteLine(tripUpdates.Count);
-
-        var allServicesParsed = ParseATResponsesIntoServices(tripUpdates, positions, routes);
-
-
-        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancellations, routes, tripUpdates);
 
         allServicesParsed.AddRange(cancelledServicesToBeAdded);
 
@@ -183,7 +184,6 @@ namespace missinglink.Services
 
       foreach (var cancellation in cancelledServices)
       {
-
         if (cancellation.Alert.Effect != "NO_SERVICE")
         {
           continue;
@@ -197,16 +197,15 @@ namespace missinglink.Services
         }
 
         // make sure the active period matches the current time.....
+        var tripFoundInTripUpdates = tripUpdates.Find(trip => trip.TripUpdate.Trip.TripId == tripUpdateId.Trip.TripId);
 
-        var trip = tripUpdates.Find(trip => trip.TripUpdate.Trip.TripId == tripUpdateId.Trip.TripId);
-
-        if (trip == null)
+        if (tripFoundInTripUpdates == null)
         {
           Console.WriteLine("Found a cancellation with a tripID that isn't in the tripupdates for AT");
           continue;
         }
 
-        var route = routes.Find(route => route.Id == trip.TripUpdate.Trip.RouteId);
+        var route = routes.Find(route => route.Id == tripFoundInTripUpdates.TripUpdate.Trip.RouteId);
 
         if (route == null)
         {

@@ -39,6 +39,28 @@ public class Position
   public int Bearing { get; set; }
 }
 
+public class Trip
+{
+  [JsonProperty("trip_id")]
+  public string TripId { get; set; }
+
+  [JsonProperty("start_time")]
+  public string StartTime { get; set; }
+
+  [JsonProperty("start_date")]
+  public string StartDate { get; set; }
+
+  [JsonProperty("schedule_relationship")]
+  public int ScheduleRelationship { get; set; }
+
+  [JsonProperty("route_id")]
+  public string RouteId { get; set; }
+
+  [JsonProperty("direction_id")]
+  public int DirectionId { get; set; }
+}
+
+
 public class Response
 {
   [JsonProperty("header")]
@@ -59,6 +81,9 @@ public class AtVehiclePositionResponse
 
 public class Vehicle
 {
+  [JsonProperty("trip")]
+  public Trip Trip { get; set; }
+
   [JsonProperty("position")]
   public Position Position { get; set; }
 

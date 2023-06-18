@@ -40,11 +40,11 @@ namespace missinglink.Services
 
         await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask, cancelledServicesTask);
 
-        var tripUpdates = await tripUpdatesTask;
-        var trips = await tripsTask;
-        var routes = await routesTask;
-        var positions = await positionsTask;
-        var cancelledServices = await cancelledServicesTask;
+        var tripUpdates = tripUpdatesTask.Result;
+        var trips = tripsTask.Result;
+        var routes = routesTask.Result;
+        var positions = positionsTask.Result;
+        var cancelledServices = cancelledServicesTask.Result;
 
         var allServices = await ParseServicesFromTripUpdates(tripUpdates);
 
@@ -179,9 +179,17 @@ namespace missinglink.Services
 
     public async Task<List<MetlinkCancellationResponse>> GetCancelledServicesFromMetlink()
     {
+      DateTime utcTime = DateTime.UtcNow;
+      TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
+      DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
+
+      string startDate = currentDateTime.ToString("yyyy-MM-dd") + "T00%3A00%3A00";
+      string endDate = currentDateTime.ToString("yyyy-MM-dd") + "T23%3A59%3A59";
+      string query = "?date_start=" + startDate + "&date_end=" + endDate;
+
       try
       {
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/trip-cancellations");
+        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/trip-cancellations" + query);
         List<MetlinkCancellationResponse> res = null;
 
         if (response.IsSuccessStatusCode)
