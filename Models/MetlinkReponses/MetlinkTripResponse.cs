@@ -1,7 +1,7 @@
 
 using Newtonsoft.Json;
 
-namespace missinglink.Models
+namespace missinglink.Models.Metlink
 {
   public class MetlinkTripResponse
   {

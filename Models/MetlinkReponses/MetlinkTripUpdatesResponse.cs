@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace missinglink.Models
+namespace missinglink.Models.Metlink
 {
 
   public class Header

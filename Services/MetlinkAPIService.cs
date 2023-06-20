@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using missinglink.Models;
-using missinglink.Models.VehiclePositions;
+using missinglink.Models.Metlink;
+using missinglink.Models.Metlink.VehiclePosition;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
-using missinglink.Metlink.Repository;
+using missinglink.Repository;
+using missinglink.Models;
 
 namespace missinglink.Services
 {
@@ -17,17 +18,17 @@ namespace missinglink.Services
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<MetlinkAPIService> _logger;
-    private readonly IMetlinkServiceRepository _metlinkServiceRepository;
+    private readonly IServiceRepository _serviceRepository;
 
-    public MetlinkAPIService(ILogger<MetlinkAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IMetlinkServiceRepository metlinkServiceRepository)
+    public MetlinkAPIService(ILogger<MetlinkAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository metlinkServiceRepository)
     {
       _httpClient = clientFactory.CreateClient("metlinkService");
       _configuration = configuration;
       _logger = logger;
-      _metlinkServiceRepository = metlinkServiceRepository;
+      _serviceRepository = metlinkServiceRepository;
     }
 
-    public async Task<List<MetlinkService>> GetLatestServiceDataFromMetlink()
+    public async Task<List<Service>> GetLatestServiceDataFromMetlink()
     {
       try
       {
@@ -39,11 +40,11 @@ namespace missinglink.Services
 
         await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask, cancelledServicesTask);
 
-        var tripUpdates = await tripUpdatesTask;
-        var trips = await tripsTask;
-        var routes = await routesTask;
-        var positions = await positionsTask;
-        var cancelledServices = await cancelledServicesTask;
+        var tripUpdates = tripUpdatesTask.Result;
+        var trips = tripsTask.Result;
+        var routes = routesTask.Result;
+        var positions = positionsTask.Result;
+        var cancelledServices = cancelledServicesTask.Result;
 
         var allServices = await ParseServicesFromTripUpdates(tripUpdates);
 
@@ -77,53 +78,10 @@ namespace missinglink.Services
       }
 
     }
-    public async Task UpdateServicesWithLatestData(List<MetlinkService> allServices)
+
+    private List<Service> GetCancelledServicesToBeAdded(List<MetlinkCancellationResponse> cancelledServices, List<RouteResponse> routes)
     {
-      try
-      {
-        await _metlinkServiceRepository.AddServicesAsync(allServices);
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "An error occurred while updates services in the db");
-        throw ex;
-      }
-    }
-
-    public async Task<ServiceStatistic> UpdateStatisticsWithLatestServices(List<MetlinkService> allServices, int newBatchId)
-    {
-      var newServiceStatistic = new ServiceStatistic();
-
-      if (allServices == null)
-      {
-        throw new ArgumentException("The service table must be empty");
-      }
-
-      newServiceStatistic.DelayedServices = allServices.Where(service => service.Status == "LATE").Count();
-      newServiceStatistic.EarlyServices = allServices.Where(service => service.Status == "EARLY").Count();
-      newServiceStatistic.NotReportingTimeServices = allServices.Where(service => service.Status == "UNKNOWN").Count();
-      newServiceStatistic.OnTimeServices = allServices.Where(service => service.Status == "ONTIME").Count();
-      newServiceStatistic.CancelledServices = allServices.Where(service => service.Status == "CANCELLED").Count();
-      newServiceStatistic.TotalServices = allServices.Where(service => service.Status != "CANCELLED").Count();
-      DateTime utcTime = DateTime.UtcNow;
-      TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
-      DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
-      newServiceStatistic.Timestamp = currentDateTime;
-      newServiceStatistic.BatchId = newBatchId;
-
-      await _metlinkServiceRepository.AddStatisticAsync(newServiceStatistic);
-      return newServiceStatistic;
-    }
-
-    public async Task<int> GenerateNewBatchId()
-    {
-      int lastBatchId = await _metlinkServiceRepository.GetLatestBatchId();
-      return lastBatchId + 1;
-    }
-
-    private List<MetlinkService> GetCancelledServicesToBeAdded(List<MetlinkCancellationResponse> cancelledServices, List<MetlinkRouteResponse> routes)
-    {
-      var cancelledServicesToBeAdded = new List<MetlinkService>();
+      var cancelledServicesToBeAdded = new List<Service>();
 
       foreach (var cancellation in cancelledServices)
       {
@@ -131,7 +89,7 @@ namespace missinglink.Services
 
         if (route != null)
         {
-          var cancelledService = new MetlinkService()
+          var cancelledService = new Service()
           {
             Status = "CANCELLED",
             TripId = cancellation.TripId,
@@ -149,17 +107,17 @@ namespace missinglink.Services
     }
 
 
-    private async Task<List<MetlinkService>> ParseServicesFromTripUpdates(List<TripUpdateHolder> tripUpdates)
+    private async Task<List<Service>> ParseServicesFromTripUpdates(List<TripUpdateHolder> tripUpdates)
     {
-      List<MetlinkService> allServices = new List<MetlinkService>();
+      List<Service> allServices = new List<Service>();
 
       tripUpdates.ToList().ForEach(trip =>
       {
-        var service = new MetlinkService();
+        var service = new Service();
 
         service.VehicleId = trip.TripUpdate.Vehicle.Id;
         int delay = trip.TripUpdate.StopTimeUpdate.Arrival.Delay;
-        if (delay > 120)
+        if (delay > 150)
         {
           service.Status = "LATE";
         }
@@ -186,7 +144,7 @@ namespace missinglink.Services
       return allServices;
     }
 
-    private void UpdateServicesWithRoutesAndPositions(List<MetlinkService> services, List<MetlinkTripResponse> trips, List<MetlinkRouteResponse> routes, List<VehiclePositionHolder> positions)
+    private void UpdateServicesWithRoutesAndPositions(List<Service> services, List<MetlinkTripResponse> trips, List<RouteResponse> routes, List<VehiclePositionHolder> positions)
     {
       foreach (var service in services)
       {
@@ -221,9 +179,17 @@ namespace missinglink.Services
 
     public async Task<List<MetlinkCancellationResponse>> GetCancelledServicesFromMetlink()
     {
+      DateTime utcTime = DateTime.UtcNow;
+      TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
+      DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
+
+      string startDate = currentDateTime.ToString("yyyy-MM-dd") + "T00%3A00%3A00";
+      string endDate = currentDateTime.ToString("yyyy-MM-dd") + "T23%3A59%3A59";
+      string query = "?date_start=" + startDate + "&date_end=" + endDate;
+
       try
       {
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/trip-cancellations");
+        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/trip-cancellations" + query);
         List<MetlinkCancellationResponse> res = null;
 
         if (response.IsSuccessStatusCode)
@@ -327,17 +293,17 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<MetlinkRouteResponse>> GetRoutes()
+    public async Task<List<RouteResponse>> GetRoutes()
     {
       try
       {
         var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs/routes");
-        List<MetlinkRouteResponse> res = new List<MetlinkRouteResponse>();
+        List<RouteResponse> res = new List<RouteResponse>();
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<List<MetlinkRouteResponse>>(responseStream);
+          res = JsonConvert.DeserializeObject<List<RouteResponse>>(responseStream);
         }
         else
         {
@@ -352,12 +318,12 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<IEnumerable<MetlinkService>> GetLatestServices()
+    public async Task<IEnumerable<Service>> GetLatestServices()
     {
       try
       {
-        var batchId = await _metlinkServiceRepository.GetLatestBatchId();
-        return _metlinkServiceRepository.GetByBatchId(batchId);
+        var batchId = await _serviceRepository.GetLatestBatchId();
+        return _serviceRepository.GetByBatchIdAndProvider(batchId, "Metlink");
       }
       catch
       {
@@ -367,12 +333,7 @@ namespace missinglink.Services
 
     public IEnumerable<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
     {
-      return _metlinkServiceRepository.GetServiceStatisticsByDate(startDate, endDate);
-    }
-
-    public void DeleteAllServices()
-    {
-      _metlinkServiceRepository.DeleteAllServices();
+      return _serviceRepository.GetServiceStatisticsByDateAndProvider(startDate, endDate, "Metlink");
     }
 
     private async Task<HttpResponseMessage> MakeAPIRequest(string url)

@@ -7,13 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using missinglink.Services;
 
-public class MetlinkServiceHub : Hub
+public class AtServiceHub : Hub
 {
   private readonly List<string> connectionIds = new List<string>();
-  private readonly IHubContext<MetlinkServiceHub> _hubContext;
-  private readonly ILogger<MetlinkServiceHub> _logger;
+  private readonly IHubContext<AtServiceHub> _hubContext;
+  private readonly ILogger<AtServiceHub> _logger;
   private readonly IServiceScopeFactory _serviceScopeFactory;
-  public MetlinkServiceHub(IHubContext<MetlinkServiceHub> hubContext, ILogger<MetlinkServiceHub> logger,
+  public AtServiceHub(IHubContext<AtServiceHub> hubContext, ILogger<AtServiceHub> logger,
     IServiceScopeFactory serviceScopeFactory)
   {
     _hubContext = hubContext;
@@ -40,13 +40,13 @@ public class MetlinkServiceHub : Hub
       {
         using (var scope = _serviceScopeFactory.CreateScope())
         {
-          var _metlinkAPIService = scope.ServiceProvider.GetService<MetlinkAPIService>();
+          var _atAPIService = scope.ServiceProvider.GetService<AtAPIService>();
 
           // get service updates
-          var services = await _metlinkAPIService.GetLatestServiceDataFromMetlink();
+          var services = await _atAPIService.GetLatestServiceDataFromAT();
           // ship them to the user
-          await _hubContext.Clients.All.SendAsync("ServiceUpdatesMetlink", services);
-          _logger.LogInformation("Sent out AT updates using SSE to " + connectionIds.Count + " clients");
+          await _hubContext.Clients.All.SendAsync("ServiceUpdatesAt", services);
+          _logger.LogInformation("Sent out Metlink updates using SSE to " + connectionIds.Count + " clients");
         }
       }
       catch

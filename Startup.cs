@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using missinglink.Contexts;
-using missinglink.Metlink.Repository;
+using missinglink.Repository;
 using missinglink.Services;
 
 namespace missinglink
@@ -34,8 +34,11 @@ namespace missinglink
       services.AddDbContext<ServiceContext>(options =>
         options.UseNpgsql(Configuration.GetConnectionString("Postgres")));
 
-      services.AddScoped<IMetlinkServiceRepository, MetlinkServiceRepository>();
+      services.AddScoped<IServiceRepository, ServiceRepository>();
+
       services.AddScoped<MetlinkAPIService>();
+      services.AddScoped<AtAPIService>();
+      services.AddScoped<ServiceAPI>();
 
       services.AddControllers();
 
@@ -80,7 +83,11 @@ namespace missinglink
       app.UseEndpoints(endpoints =>
       {
         endpoints.MapControllers();
-        endpoints.MapHub<MetlinkServiceHub>("/serviceshub", options =>
+        endpoints.MapHub<MetlinkServiceHub>("/servicehub/metlink", options =>
+      {
+        options.Transports = HttpTransportType.ServerSentEvents;
+      });
+        endpoints.MapHub<AtServiceHub>("/servicehub/at", options =>
       {
         options.Transports = HttpTransportType.ServerSentEvents;
       });

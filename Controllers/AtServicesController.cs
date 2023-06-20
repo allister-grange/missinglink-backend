@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -10,30 +9,30 @@ using missinglink.Services;
 namespace missinglink.Controllers
 {
   [ApiController]
-  [Route("api/v1/metlink")]
-  public class MetlinkServicesController : ControllerBase
+  [Route("api/v1/at")]
+  public class AtServicesController : ControllerBase
   {
-    private readonly ILogger<MetlinkServicesController> _logger;
-    private readonly MetlinkAPIService _metlinkAPIService;
-    public MetlinkServicesController(ILogger<MetlinkServicesController> logger,
-      MetlinkAPIService metlinkAPIService)
+    private readonly ILogger<AtServicesController> _logger;
+    private readonly AtAPIService _atAPIService;
+    public AtServicesController(ILogger<AtServicesController> logger,
+      AtAPIService atAPIService)
     {
       _logger = logger;
-      _metlinkAPIService = metlinkAPIService;
+      _atAPIService = atAPIService;
     }
 
     [HttpGet("services")]
-    public async Task<IEnumerable<Service>> GetNewestServices()
+    public async Task<List<Service>> GetNewestServices()
     {
       _logger.LogInformation("Fetching services request");
-      var services = await _metlinkAPIService.GetLatestServices();
+      var services = await _atAPIService.GetLatestServices();
 
-      if (services == null || services.Count() == 0)
+      if (services == null || services.Count == 0)
       {
         throw new Exception("Services table in database not populated.");
       }
 
-      _logger.LogInformation("Found " + services.Count() + " services");
+      _logger.LogInformation("Found " + services.Count + " services");
       return services;
     }
 
@@ -42,7 +41,7 @@ namespace missinglink.Controllers
     {
 
       _logger.LogInformation("Fetching statistics with startDate of: " + startDate + " and endDate of:" + endDate);
-      IEnumerable<ServiceStatistic> stats = null;
+      List<ServiceStatistic> stats = null;
 
       if (String.IsNullOrEmpty(startDate) || String.IsNullOrEmpty(endDate))
       {
@@ -57,7 +56,7 @@ namespace missinglink.Controllers
         startDateInput = DateTime.Parse(startDate);
         endDateInput = DateTime.Parse(endDate);
 
-        stats = _metlinkAPIService.GetServiceStatisticsByDate(startDateInput, endDateInput);
+        stats = _atAPIService.GetServiceStatisticsByDate(startDateInput, endDateInput);
       }
       catch (System.FormatException e)
       {
@@ -65,13 +64,12 @@ namespace missinglink.Controllers
         return BadRequest("Your date inputs were formatted incorrectly");
       }
       _logger.LogInformation("Parsed dates: " + startDateInput + " " + endDateInput);
-      if (stats == null || stats.Count() == 0)
+      if (stats == null || stats.Count == 0)
       {
         throw new Exception("ServiceStatistic table in database not populated.");
       }
 
       return Ok(stats);
     }
-
   }
 }
