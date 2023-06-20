@@ -11,7 +11,6 @@ using missinglink.Models.AT;
 using System.Text.Json;
 using Newtonsoft.Json;
 using missinglink.Models.AT.ServiceAlert;
-using System.IO;
 
 namespace missinglink.Services
 {
@@ -75,10 +74,6 @@ namespace missinglink.Services
 
         allServicesParsed.AddRange(cancelledServicesToBeAdded);
 
-        // string json = JsonConvert.SerializeObject(allServicesParsed, Formatting.Indented);
-        // string filePath = "output.json";
-        // File.WriteAllText(filePath, json);
-
         return allServicesParsed;
       }
       catch (Exception ex)
@@ -98,10 +93,12 @@ namespace missinglink.Services
 
       var newServices = new List<Service>();
 
+      // when vehicle ids match, we want to grab the one with the latest start time
       var tripUpdatesWithUniqueVehicleIds = tripUpdates.GroupBy(e => e.TripUpdate?.Vehicle?.Id)
-            .Select(g => g.OrderByDescending(e => e.TripUpdate.Delay).First())
+            .Select(g => g.OrderByDescending(e => e.TripUpdate.Trip.StartTime).First())
             .ToList();
 
+      // we aren't interested in trip updates for tomorrow (why does AT include this??)
       var tripUpdatesOnlyToday = tripUpdatesWithUniqueVehicleIds
           .Where(trip =>
           {
@@ -137,7 +134,7 @@ namespace missinglink.Services
         }
 
         newService.Delay = trip.TripUpdate.Delay;
-        if (newService.Delay > 150)
+        if (newService.Delay > 180)
         {
           newService.Status = "LATE";
         }
@@ -322,39 +319,6 @@ namespace missinglink.Services
         throw;
       }
     }
-
-    // public async Task<List<ATripResponse>> GetTrips()
-    // {
-    //   try
-    //   {
-    //     DateTime utcTime = DateTime.UtcNow;
-    //     TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
-    //     DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
-
-    //     string startDate = currentDateTime.ToString("yyyy-MM-dd") + "T00%3A00%3A00";
-    //     string endDate = currentDateTime.ToString("yyyy-MM-dd") + "T23%3A59%3A59";
-    //     string query = "?start=" + startDate + "&end=" + endDate;
-
-    //     var response = await MakeAPIRequest("https://api.opendata.A.org.nz/v1/gtfs/trips" + query);
-    //     List<ATripResponse> res = new List<ATripResponse>();
-
-    //     if (response.IsSuccessStatusCode)
-    //     {
-    //       var responseStream = await response.Content.ReadAsStringAsync();
-    //       res = JsonConvert.DeserializeObject<List<ATripResponse>>(responseStream);
-    //     }
-    //     else
-    //     {
-    //       _logger.LogError("Error making API call to: GetTrips");
-    //     }
-
-    //     return res;
-    //   }
-    //   catch
-    //   {
-    //     throw;
-    //   }
-    // }
 
     public async Task<List<Datum>> GetRoutes()
     {
