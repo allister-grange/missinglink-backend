@@ -101,6 +101,27 @@ namespace missinglink.Repository
       _dbContext.SaveChanges();
     }
 
+    public IEnumerable<dynamic> GetThreeWorstServicesForThisWeek(string providerId)
+    {
+      // _dbContext.Services.RemoveRange(_dbContext.Services);
+      // _dbContext.SaveChanges();
+      DateTime lastWeek = DateTime.Now.AddDays(-7);
+
+      var query = (from ss in _dbContext.ServiceStatistics
+                   join s in _dbContext.Services on new { ss.BatchId, ss.ProviderId } equals new { s.BatchId, s.ProviderId }
+                   where ss.Timestamp >= lastWeek && ss.ProviderId == providerId
+                   group s by s.ServiceName into g
+                   orderby g.Average(s => s.Delay) descending
+                   select new
+                   {
+                     ServiceName = g.Key,
+                     AverageDelay = g.Average(s => s.Delay)
+                   }).Take(3);
+
+      // Execute the query and retrieve the results
+      return query.ToList();
+    }
+
   }
 }
 

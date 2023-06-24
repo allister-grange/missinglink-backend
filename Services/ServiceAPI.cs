@@ -55,6 +55,20 @@ namespace missinglink.Services
       }
     }
 
+    public IEnumerable<dynamic> GetWorstServicesForPastWeek(string providerId)
+    {
+      try
+      {
+        var services = _serviceRepository.GetThreeWorstServicesForThisWeek(providerId);
+        return services;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "An error occurred while updates services in the db");
+        throw ex;
+      }
+    }
+
     public async Task UpdateStatisticsWithLatestServices(List<Service> allServices, int newBatchId)
     {
       var newServiceStatistic = new ServiceStatistic();

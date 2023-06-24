@@ -59,5 +59,19 @@ namespace missinglink.Controllers
 
       return Ok();
     }
+
+    [HttpGet("worstServices")]
+    public dynamic GetWorstServicesForPastWeek(string providerId)
+    {
+      try
+      {
+        var services = _serviceAPI.GetWorstServicesForPastWeek(providerId);
+        return services;
+      }
+      catch (System.Exception e)
+      {
+        throw new Exception("Failed to fetch worst services: " + e);
+      }
+    }
   }
 }

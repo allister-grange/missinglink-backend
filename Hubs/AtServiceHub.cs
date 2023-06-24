@@ -26,7 +26,7 @@ public class AtServiceHub : Hub
   {
     await SendServicesUpdate();
 
-    var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+    var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(60));
     while (await periodicTimer.WaitForNextTickAsync())
     {
       await SendServicesUpdate();
