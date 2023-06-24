@@ -45,7 +45,7 @@ public class AtServiceHub : Hub
           // get service updates
           var services = await _atAPIService.GetLatestServiceDataFromAT();
           // ship them to the user
-          await _hubContext.Clients.All.SendAsync("ServiceUpdatesAt", services);
+          await _hubContext.Clients.All.SendAsync("ServiceUpdatesAT", services);
           _logger.LogInformation("Sent out Metlink updates using SSE to " + connectionIds.Count + " clients");
         }
       }
