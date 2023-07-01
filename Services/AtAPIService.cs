@@ -25,12 +25,27 @@ namespace missinglink.Services
       PropertyNameCaseInsensitive = true
     };
 
+    // I bounce between two AT API keys to remain under teh quota
+    private string metlinkApiKey;
+
     public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository serviceRepository)
     {
       _httpClient = clientFactory.CreateClient("AService");
       _configuration = configuration;
       _logger = logger;
       _serviceRepository = serviceRepository;
+
+      Random random = new Random();
+      int randomNumber = random.Next(2); // Generates a random number between 0 and 1
+
+      if (randomNumber == 0)
+      {
+        metlinkApiKey = "AtAPIKey1";
+      }
+      else
+      {
+        metlinkApiKey = "AtAPIKey2";
+      }
     }
 
     public async Task<List<Service>> GetLatestServiceDataFromAT()
@@ -372,7 +387,7 @@ namespace missinglink.Services
         var request = new HttpRequestMessage(
           HttpMethod.Get, url);
         request.Headers.Add("Accept", "application/json");
-        request.Headers.Add("Ocp-Apim-Subscription-Key", _configuration.GetConnectionString("AtAPIKey"));
+        request.Headers.Add("Ocp-Apim-Subscription-Key", _configuration.GetConnectionString(metlinkApiKey));
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
