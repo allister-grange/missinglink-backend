@@ -13,7 +13,7 @@ namespace missinglink.Controllers
   public class AtServicesController : ControllerBase
   {
     private readonly ILogger<AtServicesController> _logger;
-    private readonly AtAPIService _atAPIService;
+    internal virtual AtAPIService _atAPIService { get; set; }
     public AtServicesController(ILogger<AtServicesController> logger,
       AtAPIService atAPIService)
     {
@@ -39,7 +39,6 @@ namespace missinglink.Controllers
     [HttpGet("statistics")]
     public IActionResult GetServiceStatisticsByDate(string startDate, string endDate)
     {
-
       _logger.LogInformation("Fetching statistics with startDate of: " + startDate + " and endDate of:" + endDate);
       List<ServiceStatistic> stats = null;
 

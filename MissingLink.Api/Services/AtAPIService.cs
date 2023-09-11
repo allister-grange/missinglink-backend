@@ -28,6 +28,10 @@ namespace missinglink.Services
     // I bounce between two AT API keys to remain under teh quota
     private string metlinkApiKey;
 
+    public AtAPIService()
+    {
+
+    }
     public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository serviceRepository)
     {
       _httpClient = clientFactory.CreateClient("AService");
