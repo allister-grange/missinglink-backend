@@ -11,14 +11,17 @@ using missinglink.Models.AT;
 using System.Text.Json;
 using Newtonsoft.Json;
 using missinglink.Models.AT.ServiceAlert;
+using System;
+using Google.Protobuf;
+using TransitRealtime;
 
 namespace missinglink.Services
 {
-  public class AtAPIService
+  public class MetroAPIService
   {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<AtAPIService> _logger;
+    private readonly ILogger<MetroAPIService> _logger;
     private readonly IServiceRepository _serviceRepository;
     private readonly JsonSerializerOptions options = new JsonSerializerOptions
     {
@@ -26,13 +29,13 @@ namespace missinglink.Services
     };
 
     // I bounce between two AT API keys to remain under the quota
-    private string atApiKey;
+    private string metroApiKey;
 
-    public AtAPIService()
+    public MetroAPIService()
     {
 
     }
-    public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository serviceRepository)
+    public MetroAPIService(ILogger<MetroAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository serviceRepository)
     {
       _httpClient = clientFactory.CreateClient("AService");
       _configuration = configuration;
@@ -44,57 +47,60 @@ namespace missinglink.Services
 
       if (randomNumber == 0)
       {
-        atApiKey = "AtAPIKey1";
+        metroApiKey = "MetroAPIKey1";
       }
       else
       {
-        atApiKey = "AtAPIKey2";
+        metroApiKey = "MetroAPIKey2";
       }
     }
 
-    public async Task<List<Service>> GetLatestServiceDataFromAT()
+    public async Task<List<Service>> GetLatestServiceDataFromMetro()
     {
       try
       {
         // Get all the trips 
         var tripUpdatesTask = GetTripUpdates();
-        var positionsTask = GetVehiclePositions();
-        var routesTask = GetRoutes();
-        var cancelledTask = GetCancelledAlerts();
+        // var positionsTask = GetVehiclePositions();
+        // var routesTask = GetRoutes();
+        // var cancelledTask = GetCancelledAlerts();
 
-        await Task.WhenAll(tripUpdatesTask, cancelledTask, positionsTask, routesTask);
+        await Task.WhenAll(tripUpdatesTask);
+        // await Task.WhenAll(tripUpdatesTask, cancelledTask, positionsTask, routesTask);
 
         var tripUpdates = tripUpdatesTask.Result;
-        var positions = positionsTask.Result;
-        var routes = routesTask.Result;
-        var cancellations = cancelledTask.Result;
+        // var positions = positionsTask.Result;
+        // var routes = routesTask.Result;
+        // var cancellations = cancelledTask.Result;
 
-        tripUpdates.RemoveAll(trip => trip.TripUpdate == null);
-
-        var allServicesParsed = ParseATResponsesIntoServices(tripUpdates, positions, routes);
-
-        // cancelled services are matched against the trip updates, so I'm only including 
-        // cancellations for current trips, not ones tomorrow etc
-        // this means I grab the cancellations, then I remove the trip updates so they're not 
-        // counted twice
-        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancellations, routes, tripUpdates);
-
-        foreach (var cancellation in cancellations)
-        {
-          var tripUpdateId = cancellation.Alert.InformedEntity.FirstOrDefault(informedEntity => informedEntity.Trip?.TripId != null);
-
-          if (tripUpdateId == null)
-          {
-            continue;
-          }
-
-          tripUpdates.RemoveAll((trip) => trip.TripUpdate.Trip.TripId == tripUpdateId.Trip.TripId);
-        }
-
-        allServicesParsed.AddRange(cancelledServicesToBeAdded);
-
-        return allServicesParsed;
+        // tripUpdates.RemoveAll(trip => trip.TripUpdate == null);
+        return new List<Service>() { };
       }
+
+      // var allServicesParsed = ParseATResponsesIntoServices(tripUpdates, positions, routes);
+
+      // cancelled services are matched against the trip updates, so I'm only including 
+      // cancellations for current trips, not ones tomorrow etc
+      // this means I grab the cancellations, then I remove the trip updates so they're not 
+      // counted twice
+      //   var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancellations, routes, tripUpdates);
+
+      //   foreach (var cancellation in cancellations)
+      //   {
+      //     var tripUpdateId = cancellation.Alert.InformedEntity.FirstOrDefault(informedEntity => informedEntity.Trip?.TripId != null);
+
+      //     if (tripUpdateId == null)
+      //     {
+      //       continue;
+      //     }
+
+      //     tripUpdates.RemoveAll((trip) => trip.TripUpdate.Trip.TripId == tripUpdateId.Trip.TripId);
+      //   }
+
+      //   allServicesParsed.AddRange(cancelledServicesToBeAdded);
+
+      //   return allServicesParsed;
+      // }
       catch (Exception ex)
       {
         _logger.LogError(ex, "An error occurred while retrieving service updates for AT.");
@@ -268,20 +274,30 @@ namespace missinglink.Services
     {
       try
       {
-        var response = await MakeAPIRequest("https://api.at.govt.nz/realtime/legacy/tripupdates");
-        AtTripUpdatesResponse res = new AtTripUpdatesResponse();
+        var gtfsRealtimeData = await MakeAPIRequest("https://apis.metroinfo.co.nz/rti/gtfsrt/v1/trip-updates.pb");
 
-        if (response.IsSuccessStatusCode)
+        FeedMessage feed = FeedMessage.Parser.ParseFrom(gtfsRealtimeData);
+
+        // Loop through the entities in the feed (e.g., TripUpdates, VehiclePositions, Alerts)
+        foreach (FeedEntity entity in feed.Entity)
         {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<AtTripUpdatesResponse>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetTripUpdates");
+          Console.WriteLine(entity.TripUpdate);
         }
 
-        return res.Response.Entity;
+        // AtTripUpdatesResponse res = new AtTripUpdatesResponse();
+
+        // if (response.IsSuccessStatusCode)
+        // {
+        //   var responseStream = await response.Content.ReadAsStringAsync();
+        //   res = JsonConvert.DeserializeObject<AtTripUpdatesResponse>(responseStream);
+        // }
+        // else
+        // {
+        //   _logger.LogError("Error making API call to: GetTripUpdates");
+        // }
+
+        // return res.Response.Entity;
+        return new List<Entity>() { };
       }
       catch
       {
@@ -289,80 +305,80 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<ServiceAlertEntity>> GetCancelledAlerts()
-    {
-      try
-      {
-        var response = await MakeAPIRequest("https://api.at.govt.nz/realtime/legacy/servicealerts");
-        var res = new AtServiceAlert();
+    // public async Task<List<ServiceAlertEntity>> GetCancelledAlerts()
+    // {
+    //   try
+    //   {
+    //     var response = await MakeAPIRequest("https://api.at.govt.nz/realtime/legacy/servicealerts");
+    //     var res = new AtServiceAlert();
 
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<AtServiceAlert>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetCancelledAlerts");
-        }
+    //     if (response.IsSuccessStatusCode)
+    //     {
+    //       var responseStream = await response.Content.ReadAsStringAsync();
+    //       res = JsonConvert.DeserializeObject<AtServiceAlert>(responseStream);
+    //     }
+    //     else
+    //     {
+    //       _logger.LogError("Error making API call to: GetCancelledAlerts");
+    //     }
 
-        return res.Response.Entity;
-      }
-      catch
-      {
-        throw;
-      }
-    }
+    //     return res.Response.Entity;
+    //   }
+    //   catch
+    //   {
+    //     throw;
+    //   }
+    // }
 
-    public async Task<List<PositionResponseEntity>> GetVehiclePositions()
-    {
-      try
-      {
-        var response = await MakeAPIRequest("https://api.at.govt.nz/realtime/legacy/vehiclelocations");
-        AtVehiclePositionResponse res = new AtVehiclePositionResponse();
+    // public async Task<List<PositionResponseEntity>> GetVehiclePositions()
+    // {
+    //   try
+    //   {
+    //     var response = await MakeAPIRequest("https://api.at.govt.nz/realtime/legacy/vehiclelocations");
+    //     AtVehiclePositionResponse res = new AtVehiclePositionResponse();
 
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<AtVehiclePositionResponse>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetVehiclePositions");
-        }
+    //     if (response.IsSuccessStatusCode)
+    //     {
+    //       var responseStream = await response.Content.ReadAsStringAsync();
+    //       res = JsonConvert.DeserializeObject<AtVehiclePositionResponse>(responseStream);
+    //     }
+    //     else
+    //     {
+    //       _logger.LogError("Error making API call to: GetVehiclePositions");
+    //     }
 
-        return res.Response.Entity;
-      }
-      catch
-      {
-        throw;
-      }
-    }
+    //     return res.Response.Entity;
+    //   }
+    //   catch
+    //   {
+    //     throw;
+    //   }
+    // }
 
-    public async Task<List<Datum>> GetRoutes()
-    {
-      try
-      {
-        var response = await MakeAPIRequest("https://api.at.govt.nz/gtfs/v3/routes");
-        var res = new AtRouteResponse();
+    // public async Task<List<Datum>> GetRoutes()
+    // {
+    //   try
+    //   {
+    //     var response = await MakeAPIRequest("https://api.at.govt.nz/gtfs/v3/routes");
+    //     var res = new AtRouteResponse();
 
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<AtRouteResponse>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetRoutes");
-        }
+    //     if (response.IsSuccessStatusCode)
+    //     {
+    //       var responseStream = await response.Content.ReadAsStringAsync();
+    //       res = JsonConvert.DeserializeObject<AtRouteResponse>(responseStream);
+    //     }
+    //     else
+    //     {
+    //       _logger.LogError("Error making API call to: GetRoutes");
+    //     }
 
-        return res.Data;
-      }
-      catch
-      {
-        throw;
-      }
-    }
+    //     return res.Data;
+    //   }
+    //   catch
+    //   {
+    //     throw;
+    //   }
+    // }
 
     // todo the filtering here for only AT
     public async Task<List<Service>> GetLatestServices()
@@ -383,27 +399,27 @@ namespace missinglink.Services
       return _serviceRepository.GetServiceStatisticsByDateAndProvider(startDate, endDate, "AT");
     }
 
-    private async Task<HttpResponseMessage> MakeAPIRequest(string url)
+    private async Task<byte[]> MakeAPIRequest(string url)
     {
       var attempts = 5;
       while (attempts > 0)
       {
         var request = new HttpRequestMessage(
           HttpMethod.Get, url);
-        request.Headers.Add("Accept", "application/json");
-        request.Headers.Add("Ocp-Apim-Subscription-Key", _configuration.GetConnectionString(atApiKey));
+        request.Headers.Add("Ocp-Apim-Subscription-Key", _configuration.GetConnectionString(metroApiKey));
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
         {
           Console.WriteLine("Success calling " + url);
-          return response;
+          return await response.Content.ReadAsByteArrayAsync();
+          // return response;
         }
         Console.WriteLine("Failed calling " + url);
         attempts--;
       }
 
-      throw new Exception("Couldn't get a 200 from AT's API");
+      throw new Exception("Couldn't get a 200 from Metro's API");
     }
 
   }
