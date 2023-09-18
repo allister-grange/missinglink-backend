@@ -36,7 +36,7 @@ public class Position
   public double Speed { get; set; }
 
   [JsonProperty("bearing")]
-  public int Bearing { get; set; }
+  public double Bearing { get; set; }
 }
 
 public class Trip
