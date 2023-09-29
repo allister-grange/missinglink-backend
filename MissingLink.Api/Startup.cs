@@ -36,9 +36,9 @@ namespace missinglink
 
       services.AddScoped<IServiceRepository, ServiceRepository>();
 
-      services.AddScoped<MetlinkAPIService>();
-      services.AddScoped<AtAPIService>();
-      services.AddScoped<ServiceAPI>();
+      services.AddScoped<IBaseServiceAPI, MetlinkAPIService>();
+      services.AddScoped<IBaseServiceAPI, AtAPIService>();
+      services.AddScoped<IServiceAPI, ServiceAPI>();
 
       services.AddControllers();
 

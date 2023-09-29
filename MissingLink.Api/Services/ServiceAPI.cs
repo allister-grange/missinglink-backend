@@ -11,10 +11,8 @@ using System.Text.Json;
 
 namespace missinglink.Services
 {
-  public class ServiceAPI
+  public class ServiceAPI : IServiceAPI
   {
-    private readonly HttpClient _httpClient;
-    private readonly IConfiguration _configuration;
     private readonly ILogger<AtAPIService> _logger;
     private readonly IServiceRepository _serviceRepository;
     private readonly JsonSerializerOptions options = new JsonSerializerOptions
@@ -24,8 +22,6 @@ namespace missinglink.Services
 
     public ServiceAPI(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository serviceRepository)
     {
-      _httpClient = clientFactory.CreateClient("AService");
-      _configuration = configuration;
       _logger = logger;
       _serviceRepository = serviceRepository;
     }

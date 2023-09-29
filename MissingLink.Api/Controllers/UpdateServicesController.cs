@@ -35,10 +35,10 @@ namespace missinglink.Controllers
         var newBatchId = await _serviceAPI.GenerateNewBatchId();
 
         // Auckland Transport services
-        var atServices = await _atAPIService.GetLatestServiceDataFromAT();
+        var atServices = await _atAPIService.FetchLatestTripDataFromUpstreamService();
 
         // Metlink Services
-        var metlinkServices = await _metlinkAPIService.GetLatestServiceDataFromMetlink();
+        var metlinkServices = await _metlinkAPIService.FetchLatestTripDataFromUpstreamService();
 
         var allServices = new List<Service>();
         allServices.AddRange(atServices);

@@ -43,7 +43,7 @@ public class MetlinkServiceHub : Hub
           var _metlinkAPIService = scope.ServiceProvider.GetService<MetlinkAPIService>();
 
           // get service updates
-          var services = await _metlinkAPIService.GetLatestServiceDataFromMetlink();
+          var services = await _metlinkAPIService.FetchLatestTripDataFromUpstreamService();
           // ship them to the user
           await _hubContext.Clients.All.SendAsync("ServiceUpdatesMetlink", services);
           _logger.LogInformation("Sent out AT updates using SSE to " + connectionIds.Count + " clients");

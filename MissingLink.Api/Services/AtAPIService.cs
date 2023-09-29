@@ -14,7 +14,7 @@ using missinglink.Models.AT.ServiceAlert;
 
 namespace missinglink.Services
 {
-  public class AtAPIService
+  public class AtAPIService : IBaseServiceAPI
   {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
@@ -27,11 +27,6 @@ namespace missinglink.Services
 
     // I bounce between two AT API keys to remain under teh quota
     private string metlinkApiKey;
-
-    public AtAPIService()
-    {
-
-    }
     public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository serviceRepository)
     {
       _httpClient = clientFactory.CreateClient("AService");
@@ -52,7 +47,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<Service>> GetLatestServiceDataFromAT()
+    public async Task<List<Service>> FetchLatestTripDataFromUpstreamService()
     {
       try
       {
@@ -180,19 +175,6 @@ namespace missinglink.Services
 
       return newServices;
     }
-    public async Task UpdateServicesWithLatestData(List<Service> allServices)
-    {
-      try
-      {
-        await _serviceRepository.AddServicesAsync(allServices);
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "An error occurred while updates services in the db");
-        throw ex;
-      }
-    }
-
 
     private List<Service> GetCancelledServicesToBeAdded(List<ServiceAlertEntity> cancelledServices, List<Datum> routes, List<Entity> tripUpdates)
     {
@@ -264,7 +246,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<Entity>> GetTripUpdates()
+    private async Task<List<Entity>> GetTripUpdates()
     {
       try
       {
@@ -289,7 +271,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<ServiceAlertEntity>> GetCancelledAlerts()
+    private async Task<List<ServiceAlertEntity>> GetCancelledAlerts()
     {
       try
       {
@@ -314,7 +296,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<PositionResponseEntity>> GetVehiclePositions()
+    private async Task<List<PositionResponseEntity>> GetVehiclePositions()
     {
       try
       {
@@ -339,7 +321,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<Datum>> GetRoutes()
+    private async Task<List<Datum>> GetRoutes()
     {
       try
       {
@@ -364,7 +346,6 @@ namespace missinglink.Services
       }
     }
 
-    // todo the filtering here for only AT
     public async Task<List<Service>> GetLatestServices()
     {
       try

@@ -13,7 +13,7 @@ using missinglink.Models;
 
 namespace missinglink.Services
 {
-  public class MetlinkAPIService
+  public class MetlinkAPIService : IBaseServiceAPI
   {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
@@ -28,7 +28,7 @@ namespace missinglink.Services
       _serviceRepository = metlinkServiceRepository;
     }
 
-    public async Task<List<Service>> GetLatestServiceDataFromMetlink()
+    public async Task<List<Service>> FetchLatestTripDataFromUpstreamService()
     {
       try
       {
@@ -177,7 +177,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<MetlinkCancellationResponse>> GetCancelledServicesFromMetlink()
+    private async Task<List<MetlinkCancellationResponse>> GetCancelledServicesFromMetlink()
     {
       DateTime utcTime = DateTime.UtcNow;
       TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
@@ -260,7 +260,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<MetlinkTripResponse>> GetTrips()
+    private async Task<List<MetlinkTripResponse>> GetTrips()
     {
       try
       {
@@ -318,7 +318,7 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<IEnumerable<Service>> GetLatestServices()
+    public async Task<List<Service>> GetLatestServices()
     {
       try
       {
@@ -331,7 +331,7 @@ namespace missinglink.Services
       }
     }
 
-    public IEnumerable<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
+    public List<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
     {
       return _serviceRepository.GetServiceStatisticsByDateAndProvider(startDate, endDate, "Metlink");
     }
