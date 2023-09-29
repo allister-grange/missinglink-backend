@@ -25,8 +25,9 @@ namespace missinglink.Services
       PropertyNameCaseInsensitive = true
     };
 
-    // I bounce between two AT API keys to remain under teh quota
+    // I bounce between two AT API keys to remain under the quota
     private string metlinkApiKey;
+
     public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository serviceRepository)
     {
       _httpClient = clientFactory.CreateClient("AService");
@@ -143,7 +144,6 @@ namespace missinglink.Services
         {
           newService.Lat = positionForTrip.Vehicle.Position.Latitude;
           newService.Long = positionForTrip.Vehicle.Position.Longitude;
-          // todo this might error out
           newService.Bearing = positionForTrip.Vehicle.Position.Bearing;
         }
 

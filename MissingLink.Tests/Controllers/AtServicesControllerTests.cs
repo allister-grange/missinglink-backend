@@ -15,32 +15,50 @@ namespace YourTestProject.Tests.Controllers
   {
 
     private readonly Mock<ILogger<AtServicesController>> _loggerMock;
-    private readonly Mock<AtAPIService> _atApiServiceMock;
+    private readonly Mock<IBaseServiceAPI> _atApiServiceMock;
     private readonly AtServicesController _controller;
 
     public AtServicesControllerTests()
     {
       _loggerMock = new Mock<ILogger<AtServicesController>>();
-      _atApiServiceMock = new Mock<AtAPIService>();
+      _atApiServiceMock = new Mock<IBaseServiceAPI>();
       _controller = new AtServicesController(_loggerMock.Object, _atApiServiceMock.Object);
     }
 
-    // [Fact]
-    // public async Task GetNewestServices_ReturnsServices()
-    // {
-    //   // Arrange
-    //   var expectedServices = new List<Service> { new Service(), new Service() };
-    //   _atApiServiceMock.Setup(service => service.GetLatestServices()).ReturnsAsync(expectedServices);
+    [Fact]
+    public async Task GetNewestServices_ReturnsPopulatedList()
+    {
+      // Arrange
+      var expectedServices = new List<Service>
+            {
+                new Service {  },
+                new Service {  }
+            };
+      _atApiServiceMock.Setup(api => api.GetLatestServices()).ReturnsAsync(expectedServices);
+      var controller = new AtServicesController(_loggerMock.Object, _atApiServiceMock.Object);
 
-    //   // Act
-    //   var result = await _controller.GetNewestServices();
+      // Act
+      var result = await controller.GetNewestServices();
 
-    //   // Assert
-    //   var actionResult = Assert.IsType<ActionResult<List<Service>>>(result);
-    //   var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-    //   var services = Assert.IsAssignableFrom<List<Service>>(okResult.Value);
-    //   Assert.Equal(expectedServices.Count, services.Count);
-    // }
+      // Assert
+      Assert.NotNull(result);
+      Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public async Task GetNewestServices_ReturnsEmptyList_WhenDatabaseIsEmpty()
+    {
+      // Arrange
+      _atApiServiceMock.Setup(api => api.GetLatestServices()).ReturnsAsync(new List<Service>());
+      var controller = new AtServicesController(_loggerMock.Object, _atApiServiceMock.Object);
+
+      // Act
+      var result = await controller.GetNewestServices();
+
+      // Assert
+      Assert.NotNull(result);
+      Assert.Empty(result);
+    }
 
     [Theory]
     [InlineData("2023-08-01", "2023-08-31")]
@@ -58,13 +76,13 @@ namespace YourTestProject.Tests.Controllers
       _atApiServiceMock.Setup(service => service.GetServiceStatisticsByDate(date1, date2)).Returns(expectedStatistics);
 
       // Act
-      var result = _controller.GetServiceStatisticsByDate(startDate, endDate);
+      var actionResult = _controller.GetServiceStatisticsByDate(startDate, endDate);
 
       // Assert
-      var actionResult = Assert.IsType<IActionResult>(result);
-      var okResult = Assert.IsType<OkObjectResult>(actionResult);
-      var statistics = Assert.IsAssignableFrom<List<ServiceStatistic>>(okResult.Value);
-      Assert.Equal(expectedStatistics.Count, statistics.Count);
+      Assert.IsType<OkObjectResult>(actionResult);
+      var result = (OkObjectResult)actionResult;
+      Assert.NotNull(result.Value);
+      Assert.Equal(expectedStatistics, result.Value);
     }
 
     [Theory]

@@ -20,10 +20,26 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <ProjectReference Include="..\MissingLink.Api\missinglink.csproj" />
+    <Content Include="Samples\AT\routes.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Samples\AT\service_alerts.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Samples\AT\trip_updates.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Samples\AT\vehicle_locations.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\MissingLink.Api\missinglink.csproj" />
-  </ItemGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Copy SourceFiles="Samples\AT\routes.json" DestinationFolder="$(OutDir)\" />
+    <Copy SourceFiles="Samples\AT\service_alerts.json" DestinationFolder="$(OutDir)\" />
+    <Copy SourceFiles="Samples\AT\trip_updates.json" DestinationFolder="$(OutDir)\" />
+    <Copy SourceFiles="Samples\AT\vehicle_locations.json" DestinationFolder="$(OutDir)\" />
+  </Target>
 
 </Project>
