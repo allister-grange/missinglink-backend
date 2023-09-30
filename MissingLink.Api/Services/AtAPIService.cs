@@ -4,11 +4,11 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using missinglink.Models;
+using missinglink.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using missinglink.Repository;
 using missinglink.Models.AT;
-using System.Text.Json;
 using Newtonsoft.Json;
 using missinglink.Models.AT.ServiceAlert;
 
@@ -20,20 +20,19 @@ namespace missinglink.Services
     private readonly IConfiguration _configuration;
     private readonly ILogger<AtAPIService> _logger;
     private readonly IServiceRepository _serviceRepository;
-    private readonly JsonSerializerOptions options = new JsonSerializerOptions
-    {
-      PropertyNameCaseInsensitive = true
-    };
+    private readonly IDateTimeProvider _dateTimeProvider;
 
     // I bounce between two AT API keys to remain under the quota
     private string metlinkApiKey;
 
-    public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository serviceRepository)
+    public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration,
+      IServiceRepository serviceRepository, IDateTimeProvider dateTimeProvider)
     {
-      _httpClient = clientFactory.CreateClient("AService");
+      _httpClient = clientFactory.CreateClient("ATService");
       _configuration = configuration;
       _logger = logger;
       _serviceRepository = serviceRepository;
+      _dateTimeProvider = dateTimeProvider;
 
       Random random = new Random();
       int randomNumber = random.Next(2); // Generates a random number between 0 and 1
@@ -101,8 +100,10 @@ namespace missinglink.Services
     private List<Service> ParseATResponsesIntoServices(List<Entity> tripUpdates,
       List<PositionResponseEntity> positions, List<Datum> routes)
     {
+      DateTime currentUtc = _dateTimeProvider.UtcNow;
+
       TimeZoneInfo nzTimeZone = TimeZoneInfo.FindSystemTimeZoneById("New Zealand Standard Time");
-      DateTime nzDateTime = TimeZoneInfo.ConvertTime(DateTime.UtcNow, nzTimeZone);
+      DateTime nzDateTime = TimeZoneInfo.ConvertTime(currentUtc, nzTimeZone);
       string formattedDate = nzDateTime.ToString("yyyyMMdd");
       string formattedTime = nzDateTime.ToString("HH:mm:ss");
 
@@ -345,7 +346,6 @@ namespace missinglink.Services
         throw;
       }
     }
-
     public async Task<List<Service>> GetLatestServices()
     {
       try

@@ -46,7 +46,7 @@ namespace missinglink.Services
         var positions = positionsTask.Result;
         var cancelledServices = cancelledServicesTask.Result;
 
-        var allServices = await ParseServicesFromTripUpdates(tripUpdates);
+        var allServices = ParseServicesFromTripUpdates(tripUpdates);
 
         // todo this is bad practise (not cloning the array)
         UpdateServicesWithRoutesAndPositions(allServices, trips, routes, positions);
@@ -107,7 +107,7 @@ namespace missinglink.Services
     }
 
 
-    private async Task<List<Service>> ParseServicesFromTripUpdates(List<TripUpdateHolder> tripUpdates)
+    private List<Service> ParseServicesFromTripUpdates(List<TripUpdateHolder> tripUpdates)
     {
       List<Service> allServices = new List<Service>();
 

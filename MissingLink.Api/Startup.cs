@@ -10,6 +10,7 @@ using Microsoft.OpenApi.Models;
 using missinglink.Contexts;
 using missinglink.Repository;
 using missinglink.Services;
+using missinglink.Utils;
 
 namespace missinglink
 {
@@ -35,6 +36,7 @@ namespace missinglink
         options.UseNpgsql(Configuration.GetConnectionString("Postgres")));
 
       services.AddScoped<IServiceRepository, ServiceRepository>();
+      services.AddScoped<IDateTimeProvider, DefaultDateTimeProvider>();
 
       services.AddScoped<IBaseServiceAPI, MetlinkAPIService>();
       services.AddScoped<IBaseServiceAPI, AtAPIService>();
