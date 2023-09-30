@@ -55,6 +55,30 @@
         "is_deleted": false
       },
       {
+        "id": "51100306163-20230927142708_v106.29",
+        "trip_update": {
+          "trip": {
+            "trip_id": "248-840034-80400-2-6067400-e4506eo4",
+            "start_time": "22:20:00",
+            "start_date": "20230930",
+            "schedule_relationship": 0,
+            "route_id": "ONE-201",
+            "direction_id": 1
+          },
+          "stop_time_update": {
+            "stop_sequence": 1,
+            "arrival": { "delay": 0, "time": 1695979200 },
+            "departure": { "delay": 0, "time": 1695979200 },
+            "stop_id": "9003-4011937f",
+            "schedule_relationship": 0
+          },
+          "timestamp": 1695970077,
+          "vehicle": { "id": "59595", "label": "AMP        593" },
+          "delay": 0
+        },
+        "is_deleted": false
+      },
+      {
         "id": "51100306193-20230927142708_v106.28",
         "trip_update": {
           "trip": {

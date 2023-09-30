@@ -1218,6 +1218,21 @@
         "is_deleted": false
       },
       {
+        "id": "59595",
+        "vehicle": {
+          "position": {
+            "latitude": -36.925583333333336,
+            "longitude": 174.786545,
+            "bearing": "215",
+            "odometer": 635359007,
+            "speed": 0
+          },
+          "timestamp": 1695973600,
+          "vehicle": { "id": "59593", "label": "AMP        593" }
+        },
+        "is_deleted": false
+      },
+      {
         "id": "26114",
         "vehicle": {
           "trip": {

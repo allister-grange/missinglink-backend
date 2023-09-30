@@ -16,8 +16,6 @@ public class AtAPIServiceTests
   private readonly Mock<IConfiguration> _mockConfiguration;
   private readonly Mock<ILogger<AtAPIService>> _mockLogger;
   private readonly Mock<IServiceRepository> _mockServiceRepository;
-  private readonly Mock<HttpMessageHandler> _mockHandler;
-  private readonly AtAPIService _service;
 
   public AtAPIServiceTests()
   {
@@ -25,42 +23,112 @@ public class AtAPIServiceTests
     _mockConfiguration = new Mock<IConfiguration>();
     _mockLogger = new Mock<ILogger<AtAPIService>>();
     _mockServiceRepository = new Mock<IServiceRepository>();
-    var mockDateTimeProvider = new Mock<IDateTimeProvider>();
-    mockDateTimeProvider.Setup(dtp => dtp.UtcNow).Returns(new DateTime(2023, 9, 29, 23, 59, 59));
-    _mockHandler = CreateMockHandler();
-
-    _service = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
+    CreateMockHandler();
   }
 
+
+  // Test that the first vehicle in the example JSON looks okay
   [Fact]
-  public async Task FetchLatestTripDataFromUpstreamService_ReturnsExpectedResults()
+  public async Task FetchLatestTripDataFromUpstreamService_ReturnsExpectedResultForFirstEntry()
   {
-    var result = await _service.FetchLatestTripDataFromUpstreamService();
+    // Arrange
+    var mockDateTimeProvider = new Mock<IDateTimeProvider>();
+    mockDateTimeProvider.Setup(dtp => dtp.UtcNow).Returns(new DateTime(2023, 9, 29, 23, 59, 59));
+    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
+
+    // Act
+    var services = await atApiService.FetchLatestTripDataFromUpstreamService();
 
     // Assert
-    Assert.NotNull(result);
-    Assert.IsType<List<Service>>(result);
+    Assert.NotNull(services);
+    Assert.IsType<List<Service>>(services);
 
-    // Test total item count
-    Assert.Equal(546, result.Count());
+    // Test total services count
+    Assert.Equal(546, services.Count());
 
-    // Test a couple of details from specific vehicles
-    Assert.Equal(215, result.First().Bearing);
-    Assert.Equal(0, result.First().Delay);
-    Assert.Equal(-36.925583333333336, result.First().Lat);
-    Assert.Equal(174.786545, result.First().Long);
-    Assert.Equal("AT", result.First().ProviderId);
-    Assert.Equal("ONE", result.First().RouteDescription);
-    Assert.Equal("ONE-201", result.First().RouteId);
-    Assert.Equal("ONE", result.First().RouteLongName);
-    Assert.Equal("ONE", result.First().RouteShortName);
-    Assert.Equal("ONE", result.First().ServiceName);
-    Assert.Equal("UNKNOWN", result.First().Status);
-    Assert.Equal("51100306140-20230927142708_v106.28", result.First().TripId);
-    Assert.Equal("59593", result.First().VehicleId);
-    Assert.Equal("Train", result.First().VehicleType);
+    // Test a the details from the first vehicle in the trip updates
+    Service service = services.First();
+    Assert.Equal(215, service.Bearing);
+    Assert.Equal(0, service.Delay);
+    Assert.Equal(-36.925583333333336, service.Lat);
+    Assert.Equal(174.786545, service.Long);
+    Assert.Equal("AT", service.ProviderId);
+    Assert.Equal("ONE", service.RouteDescription);
+    Assert.Equal("ONE-201", service.RouteId);
+    Assert.Equal("ONE", service.RouteLongName);
+    Assert.Equal("ONE", service.RouteShortName);
+    Assert.Equal("ONE", service.ServiceName);
+    Assert.Equal("UNKNOWN", service.Status);
+    Assert.Equal("51100306140-20230927142708_v106.28", service.TripId);
+    Assert.Equal("59593", service.VehicleId);
+    Assert.Equal("Train", service.VehicleType);
+  }
 
-    // Check the route, the bearing, everything etc
+  // Test that a vehicle for tomorrows date (in this case, 30/09/2023) is not included in the services
+  [Fact]
+  public async Task FetchLatestTripDataFromUpstreamService_DoesntReturnTomorrowsServices()
+  {
+    // Arrange
+    var mockDateTimeProvider = new Mock<IDateTimeProvider>();
+    mockDateTimeProvider.Setup(dtp => dtp.UtcNow).Returns(new DateTime(2023, 9, 29, 23, 59, 59));
+    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
+
+    // Act
+    var services = await atApiService.FetchLatestTripDataFromUpstreamService();
+
+    // Assert
+    Assert.NotNull(services);
+    Assert.IsType<List<Service>>(services);
+
+    // Test total services count
+    Assert.Equal(546, services.Count());
+
+    // Make sure that a trip that is tomorrow isn't in the list of services
+    Assert.Null(services.FirstOrDefault(service => service.TripId == "51100306163-20230927142708_v106.29"));
+  }
+
+  // Test that a vehicle for a trip that hasn't started yet isn't included in the services
+  [Fact]
+  public async Task FetchLatestTripDataFromUpstreamService_DoesntReturnATripThatHasntStarted()
+  {
+    // Arrange
+    var mockDateTimeProvider = new Mock<IDateTimeProvider>();
+    mockDateTimeProvider.Setup(dtp => dtp.UtcNow).Returns(new DateTime(2023, 9, 29, 22, 10, 00));
+    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
+
+    // Act
+    var services = await atApiService.FetchLatestTripDataFromUpstreamService();
+
+    // Assert
+    Assert.NotNull(services);
+    Assert.IsType<List<Service>>(services);
+
+    // Make sure that a trip that hasn't started yet isn't included in the services
+    Assert.Null(services.FirstOrDefault(service => service.TripId == "51100306181-20230927142708_v106.28"));
+  }
+
+  // Test that vehicle IDs do not get duplicated in the services
+  [Fact]
+  public async Task FetchLatestTripDataFromUpstreamService_DoesntReturnTripsForTheSameVehicle()
+  {
+    // Arrange
+    var mockDateTimeProvider = new Mock<IDateTimeProvider>();
+    mockDateTimeProvider.Setup(dtp => dtp.UtcNow).Returns(new DateTime(2023, 9, 29, 22, 10, 00));
+    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
+
+    // Act
+    var services = await atApiService.FetchLatestTripDataFromUpstreamService();
+
+    // Assert
+    Assert.NotNull(services);
+    Assert.IsType<List<Service>>(services);
+
+    // Make sure that no vehicle is counted twice in the services
+    var duplicateVehicleIds = services.GroupBy(s => s.VehicleId)
+                                      .Where(g => g.Count() > 1)
+                                      .Select(g => g.Key)
+                                      .ToList();
+    Assert.Empty(duplicateVehicleIds);
   }
 
   private Mock<HttpMessageHandler> CreateMockHandler()
