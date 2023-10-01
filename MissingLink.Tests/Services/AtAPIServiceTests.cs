@@ -46,7 +46,7 @@ public class AtAPIServiceTests
     // Test total services count
     Assert.Equal(546, services.Count());
 
-    // Test a the details from the first vehicle in the trip updates
+    // Test the details from the first vehicle in the trip updates
     Service service = services.First();
     Assert.Equal(215, service.Bearing);
     Assert.Equal(0, service.Delay);
@@ -134,10 +134,10 @@ public class AtAPIServiceTests
   private Mock<HttpMessageHandler> CreateMockHandler()
   {
     var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
-    var tripUpdatesJson = File.ReadAllText("trip_updates.json");
-    var routesJson = File.ReadAllText("routes.json");
-    var serviceAlertsJson = File.ReadAllText("service_alerts.json");
-    var vehicleLocationJson = File.ReadAllText("vehicle_locations.json");
+    var tripUpdatesJson = File.ReadAllText("AT/trip_updates.json");
+    var routesJson = File.ReadAllText("AT/routes.json");
+    var serviceAlertsJson = File.ReadAllText("AT/service_alerts.json");
+    var vehicleLocationsJson = File.ReadAllText("AT/vehicle_locations.json");
 
     mockHttpMessageHandler
         .Protected()
@@ -175,7 +175,7 @@ public class AtAPIServiceTests
         .ReturnsAsync(new HttpResponseMessage
         {
           StatusCode = HttpStatusCode.OK,
-          Content = new StringContent(vehicleLocationJson, Encoding.UTF8, "application/json"),
+          Content = new StringContent(vehicleLocationsJson, Encoding.UTF8, "application/json"),
         });
 
     mockHttpMessageHandler
