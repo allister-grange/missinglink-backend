@@ -32,18 +32,34 @@ namespace missinglink.Services
     {
       try
       {
-        var tripUpdatesTask = GetTripUpdates();
-        var tripsTask = GetTrips();
-        var routesTask = GetRoutes();
-        var positionsTask = GetVehiclePositions();
         var cancelledServicesTask = GetCancelledServicesFromMetlink();
+
+        var tripUpdatesTask = FetchDataFromMetlinkApi(
+          "https://api.opendata.metlink.org.nz/v1/gtfs-rt/tripupdates",
+          () => new MetlinkTripUpdatesResponse()
+        );
+
+        var tripsTask = FetchDataFromMetlinkApi(
+          "https://api.opendata.metlink.org.nz/v1/gtfs/trips",
+          () => new List<MetlinkTripResponse>()
+        );
+
+        var routesTask = FetchDataFromMetlinkApi(
+          "https://api.opendata.metlink.org.nz/v1/gtfs/routes",
+          () => new List<RouteResponse>()
+        );
+
+        var positionsTask = FetchDataFromMetlinkApi(
+          "https://api.opendata.metlink.org.nz/v1/gtfs-rt/vehiclepositions",
+          () => new VehiclePositionResponse()
+        );
 
         await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask, cancelledServicesTask);
 
-        var tripUpdates = tripUpdatesTask.Result;
+        var tripUpdates = tripUpdatesTask.Result.Trips;
         var trips = tripsTask.Result;
         var routes = routesTask.Result;
-        var positions = positionsTask.Result;
+        var positions = positionsTask.Result.VehiclePositions;
         var cancelledServices = cancelledServicesTask.Result;
 
         var allServices = ParseServicesFromTripUpdates(tripUpdates);
@@ -76,7 +92,6 @@ namespace missinglink.Services
         _logger.LogError(ex, "An error occurred while retrieving service updates.");
         throw;
       }
-
     }
 
     private List<Service> GetCancelledServicesToBeAdded(List<MetlinkCancellationResponse> cancelledServices, List<RouteResponse> routes)
@@ -210,107 +225,24 @@ namespace missinglink.Services
       }
     }
 
-    public async Task<List<TripUpdateHolder>> GetTripUpdates()
+    private async Task<T> FetchDataFromMetlinkApi<T>(string url, Func<T> defaultResultFactory)
     {
       try
       {
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs-rt/tripupdates");
-        MetlinkTripUpdatesResponse res = new MetlinkTripUpdatesResponse();
+        var response = await MakeAPIRequest(url);
+        T result = defaultResultFactory();
 
         if (response.IsSuccessStatusCode)
         {
           var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<MetlinkTripUpdatesResponse>(responseStream);
+          result = JsonConvert.DeserializeObject<T>(responseStream);
         }
         else
         {
-          _logger.LogError("Error making API call to: GetTripUpdates");
+          _logger.LogError($"Error making API call to: {url}");
         }
 
-        return res.Trips;
-      }
-      catch
-      {
-        throw;
-      }
-    }
-
-    public async Task<List<VehiclePositionHolder>> GetVehiclePositions()
-    {
-      try
-      {
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs-rt/vehiclepositions");
-        VehiclePositionResponse res = new VehiclePositionResponse();
-
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<VehiclePositionResponse>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetVehiclePositions");
-        }
-
-        return res.VehiclePositions;
-      }
-      catch
-      {
-        throw;
-      }
-    }
-
-    private async Task<List<MetlinkTripResponse>> GetTrips()
-    {
-      try
-      {
-        DateTime utcTime = DateTime.UtcNow;
-        TimeZoneInfo serverZone = TimeZoneInfo.FindSystemTimeZoneById("NZ");
-        DateTime currentDateTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, serverZone);
-
-        string startDate = currentDateTime.ToString("yyyy-MM-dd") + "T00%3A00%3A00";
-        string endDate = currentDateTime.ToString("yyyy-MM-dd") + "T23%3A59%3A59";
-        string query = "?start=" + startDate + "&end=" + endDate;
-
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs/trips" + query);
-        List<MetlinkTripResponse> res = new List<MetlinkTripResponse>();
-
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<List<MetlinkTripResponse>>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetTrips");
-        }
-
-        return res;
-      }
-      catch
-      {
-        throw;
-      }
-    }
-
-    public async Task<List<RouteResponse>> GetRoutes()
-    {
-      try
-      {
-        var response = await MakeAPIRequest("https://api.opendata.metlink.org.nz/v1/gtfs/routes");
-        List<RouteResponse> res = new List<RouteResponse>();
-
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<List<RouteResponse>>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetRoutes");
-        }
-
-        return res;
+        return result;
       }
       catch
       {

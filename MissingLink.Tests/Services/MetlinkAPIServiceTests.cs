@@ -60,7 +60,28 @@ public class MetlinkAPIServiceTests
     Assert.Equal("3316", service.VehicleId);
     Assert.Equal("BUS", service.VehicleType);
   }
+  // Test that the correct amount of each status is returned
+  [Fact]
+  public async Task FetchLatestTripDataFromUpstreamService_ReturnsCorrectStatusCount()
+  {
+    // Arrange
+    var metlinkApiService = new MetlinkAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object);
 
+    // Act
+    var services = await metlinkApiService.FetchLatestTripDataFromUpstreamService();
+
+    // Assert
+    Assert.NotNull(services);
+    Assert.IsType<List<Service>>(services);
+
+    // Test total services count
+    Assert.Equal(190, services.Count());
+    Assert.Equal(44, services.Where(service => service.Status == "LATE").Count());
+    Assert.Equal(101, services.Where(service => service.Status == "CANCELLED").Count());
+    Assert.Equal(5, services.Where(service => service.Status == "EARLY").Count());
+    Assert.Equal(28, services.Where(service => service.Status == "ONTIME").Count());
+    Assert.Equal(12, services.Where(service => service.Status == "UNKNOWN").Count());
+  }
 
 
   private Mock<HttpMessageHandler> CreateMockHandler()

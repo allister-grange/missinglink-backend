@@ -52,10 +52,25 @@ namespace missinglink.Services
       try
       {
         // Get all the trips 
-        var tripUpdatesTask = GetTripUpdates();
-        var positionsTask = GetVehiclePositions();
-        var routesTask = GetRoutes();
-        var cancelledTask = GetCancelledAlerts();
+        var tripUpdatesTask = FetchDataFromATApi<AtTripUpdatesResponse, Entity>(
+          "https://api.at.govt.nz/realtime/legacy/tripupdates",
+          res => res.Response.Entity
+        );
+
+        var cancelledTask = FetchDataFromATApi<AtServiceAlert, ServiceAlertEntity>(
+            "https://api.at.govt.nz/realtime/legacy/servicealerts",
+            res => res.Response.Entity
+        );
+
+        var positionsTask = FetchDataFromATApi<AtVehiclePositionResponse, PositionResponseEntity>(
+            "https://api.at.govt.nz/realtime/legacy/vehiclelocations",
+            res => res.Response.Entity
+        );
+
+        var routesTask = FetchDataFromATApi<AtRouteResponse, Datum>(
+            "https://api.at.govt.nz/gtfs/v3/routes",
+            res => res.Data
+        );
 
         await Task.WhenAll(tripUpdatesTask, cancelledTask, positionsTask, routesTask);
 
@@ -96,6 +111,30 @@ namespace missinglink.Services
         throw;
       }
     }
+
+    private async Task<List<TResponseEntity>> FetchDataFromATApi<TResponse, TResponseEntity>(string apiUrl, Func<TResponse, List<TResponseEntity>> entitySelector)
+    {
+      try
+      {
+        var response = await MakeAPIRequest(apiUrl);
+        if (response.IsSuccessStatusCode)
+        {
+          var responseStream = await response.Content.ReadAsStringAsync();
+          var deserializedResponse = JsonConvert.DeserializeObject<TResponse>(responseStream);
+          return entitySelector(deserializedResponse);
+        }
+        else
+        {
+          _logger.LogError($"Error making API call to: {apiUrl}");
+          return new List<TResponseEntity>();
+        }
+      }
+      catch
+      {
+        throw;
+      }
+    }
+
 
     private List<Service> ParseATResponsesIntoServices(List<Entity> tripUpdates,
       List<PositionResponseEntity> positions, List<Datum> routes)
@@ -247,105 +286,6 @@ namespace missinglink.Services
       }
     }
 
-    private async Task<List<Entity>> GetTripUpdates()
-    {
-      try
-      {
-        var response = await MakeAPIRequest("https://api.at.govt.nz/realtime/legacy/tripupdates");
-        AtTripUpdatesResponse res = new AtTripUpdatesResponse();
-
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<AtTripUpdatesResponse>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetTripUpdates");
-        }
-
-        return res.Response.Entity;
-      }
-      catch
-      {
-        throw;
-      }
-    }
-
-    private async Task<List<ServiceAlertEntity>> GetCancelledAlerts()
-    {
-      try
-      {
-        var response = await MakeAPIRequest("https://api.at.govt.nz/realtime/legacy/servicealerts");
-        var res = new AtServiceAlert();
-
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<AtServiceAlert>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetCancelledAlerts");
-        }
-
-        return res.Response.Entity;
-      }
-      catch
-      {
-        throw;
-      }
-    }
-
-    private async Task<List<PositionResponseEntity>> GetVehiclePositions()
-    {
-      try
-      {
-        var response = await MakeAPIRequest("https://api.at.govt.nz/realtime/legacy/vehiclelocations");
-        AtVehiclePositionResponse res = new AtVehiclePositionResponse();
-
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<AtVehiclePositionResponse>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetVehiclePositions");
-        }
-
-        return res.Response.Entity;
-      }
-      catch
-      {
-        throw;
-      }
-    }
-
-    private async Task<List<Datum>> GetRoutes()
-    {
-      try
-      {
-        var response = await MakeAPIRequest("https://api.at.govt.nz/gtfs/v3/routes");
-        var res = new AtRouteResponse();
-
-        if (response.IsSuccessStatusCode)
-        {
-          var responseStream = await response.Content.ReadAsStringAsync();
-          res = JsonConvert.DeserializeObject<AtRouteResponse>(responseStream);
-        }
-        else
-        {
-          _logger.LogError("Error making API call to: GetRoutes");
-        }
-
-        return res.Data;
-      }
-      catch
-      {
-        throw;
-      }
-    }
     public async Task<List<Service>> GetLatestServices()
     {
       try
