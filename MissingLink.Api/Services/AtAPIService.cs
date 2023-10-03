@@ -274,15 +274,15 @@ namespace missinglink.Services
       switch (routeType)
       {
         case 3:
-          return "Bus";
+          return "BUS";
         case 2:
-          return "Train";
+          return "TRAIN";
         case 4:
-          return "Ferry";
+          return "FERRY";
         case 712:
-          return "Bus";
+          return "BUS";
         default:
-          return "Bus";
+          return "BUS";
       }
     }
 
