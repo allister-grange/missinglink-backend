@@ -33,7 +33,7 @@ namespace missinglink
       });
 
       services.Configure<MetlinkApiConfig>(Configuration.GetSection("MetlinkApiConfig"));
-
+      services.Configure<AtApiConfig>(Configuration.GetSection("AtApiConfig"));
 
       services.AddDbContext<ServiceContext>(options =>
         options.UseNpgsql(Configuration.GetConnectionString("Postgres")));

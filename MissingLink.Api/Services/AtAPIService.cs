@@ -11,6 +11,7 @@ using missinglink.Repository;
 using missinglink.Models.AT;
 using Newtonsoft.Json;
 using missinglink.Models.AT.ServiceAlert;
+using Microsoft.Extensions.Options;
 
 namespace missinglink.Services
 {
@@ -21,18 +22,20 @@ namespace missinglink.Services
     private readonly ILogger<AtAPIService> _logger;
     private readonly IServiceRepository _serviceRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly AtApiConfig _atApiConfig;
 
     // I bounce between two AT API keys to remain under the quota
     private string metlinkApiKey;
 
-    public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration,
-      IServiceRepository serviceRepository, IDateTimeProvider dateTimeProvider)
+    public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory,
+                        IOptions<AtApiConfig> atApiConfigOptions, IServiceRepository serviceRepository,
+                        IDateTimeProvider dateTimeProvider)
     {
       _httpClient = clientFactory.CreateClient("ATService");
-      _configuration = configuration;
       _logger = logger;
       _serviceRepository = serviceRepository;
       _dateTimeProvider = dateTimeProvider;
+      _atApiConfig = atApiConfigOptions.Value;
 
       Random random = new Random();
       int randomNumber = random.Next(2); // Generates a random number between 0 and 1
@@ -52,22 +55,22 @@ namespace missinglink.Services
       {
         // Get all the trips 
         var tripUpdatesTask = FetchDataFromATApi<AtTripUpdatesResponse, Entity>(
-          "https://api.at.govt.nz/realtime/legacy/tripupdates",
+          $"{_atApiConfig.BaseUrl}{_atApiConfig.TripUpdatesEndpoint}",
           res => res.Response.Entity
         );
 
         var cancelledTask = FetchDataFromATApi<AtServiceAlert, ServiceAlertEntity>(
-            "https://api.at.govt.nz/realtime/legacy/servicealerts",
+            $"{_atApiConfig.BaseUrl}{_atApiConfig.ServiceAlertsEndpoint}",
             res => res.Response.Entity
         );
 
         var positionsTask = FetchDataFromATApi<AtVehiclePositionResponse, PositionResponseEntity>(
-            "https://api.at.govt.nz/realtime/legacy/vehiclelocations",
+            $"{_atApiConfig.BaseUrl}{_atApiConfig.VehicleLocationsEndpoint}",
             res => res.Response.Entity
         );
 
         var routesTask = FetchDataFromATApi<AtRouteResponse, Datum>(
-            "https://api.at.govt.nz/gtfs/v3/routes",
+            $"{_atApiConfig.BaseUrl}{_atApiConfig.RoutesEndpoint}",
             res => res.Data
         );
 
@@ -303,13 +306,19 @@ namespace missinglink.Services
 
     private async Task<HttpResponseMessage> MakeAPIRequest(string url)
     {
+      // We want to bounce between 2 api keys to keep the usage down
+      Random random = new Random();
+      int randomNumber = random.Next(2);
+      metlinkApiKey = randomNumber == 0 ? _atApiConfig.ApiKey1 : _atApiConfig.ApiKey2;
+
       var attempts = 5;
+
       while (attempts > 0)
       {
         var request = new HttpRequestMessage(
           HttpMethod.Get, url);
         request.Headers.Add("Accept", "application/json");
-        request.Headers.Add("Ocp-Apim-Subscription-Key", _configuration.GetConnectionString(metlinkApiKey));
+        request.Headers.Add("Ocp-Apim-Subscription-Key", metlinkApiKey);
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)

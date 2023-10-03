@@ -9,21 +9,22 @@ using Microsoft.Extensions.Configuration;
 using Moq.Protected;
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.Options;
 
 public class AtAPIServiceTests
 {
   private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
-  private readonly Mock<IConfiguration> _mockConfiguration;
   private readonly Mock<ILogger<AtAPIService>> _mockLogger;
   private readonly Mock<IServiceRepository> _mockServiceRepository;
+  private Mock<IOptions<AtApiConfig>> _mockAtConfig;
 
   public AtAPIServiceTests()
   {
     _mockHttpClientFactory = new Mock<IHttpClientFactory>();
-    _mockConfiguration = new Mock<IConfiguration>();
     _mockLogger = new Mock<ILogger<AtAPIService>>();
     _mockServiceRepository = new Mock<IServiceRepository>();
-    CreateMockHandler();
+    _mockAtConfig = new Mock<IOptions<AtApiConfig>>();
+    PrepareMocks();
   }
 
 
@@ -34,7 +35,7 @@ public class AtAPIServiceTests
     // Arrange
     var mockDateTimeProvider = new Mock<IDateTimeProvider>();
     mockDateTimeProvider.Setup(dtp => dtp.UtcNow).Returns(new DateTime(2023, 9, 29, 23, 59, 59));
-    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
+    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockAtConfig.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
 
     // Act
     var services = await atApiService.FetchLatestTripDataFromUpstreamService();
@@ -71,7 +72,7 @@ public class AtAPIServiceTests
     // Arrange
     var mockDateTimeProvider = new Mock<IDateTimeProvider>();
     mockDateTimeProvider.Setup(dtp => dtp.UtcNow).Returns(new DateTime(2023, 9, 29, 23, 59, 59));
-    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
+    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockAtConfig.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
 
     // Act
     var services = await atApiService.FetchLatestTripDataFromUpstreamService();
@@ -94,7 +95,7 @@ public class AtAPIServiceTests
     // Arrange
     var mockDateTimeProvider = new Mock<IDateTimeProvider>();
     mockDateTimeProvider.Setup(dtp => dtp.UtcNow).Returns(new DateTime(2023, 9, 29, 22, 10, 00));
-    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
+    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockAtConfig.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
 
     // Act
     var services = await atApiService.FetchLatestTripDataFromUpstreamService();
@@ -114,7 +115,7 @@ public class AtAPIServiceTests
     // Arrange
     var mockDateTimeProvider = new Mock<IDateTimeProvider>();
     mockDateTimeProvider.Setup(dtp => dtp.UtcNow).Returns(new DateTime(2023, 9, 29, 22, 10, 00));
-    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
+    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockAtConfig.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
 
     // Act
     var services = await atApiService.FetchLatestTripDataFromUpstreamService();
@@ -131,8 +132,20 @@ public class AtAPIServiceTests
     Assert.Empty(duplicateVehicleIds);
   }
 
-  private Mock<HttpMessageHandler> CreateMockHandler()
+  private void PrepareMocks()
   {
+    _mockAtConfig.Setup(config => config.Value)
+          .Returns(new AtApiConfig
+          {
+            BaseUrl = "https://api.at.govt.nz",
+            TripUpdatesEndpoint = "/realtime/legacy/tripupdates",
+            ServiceAlertsEndpoint = "/realtime/legacy/servicealerts",
+            VehicleLocationsEndpoint = "/realtime/legacy/vehiclelocations",
+            RoutesEndpoint = "/gtfs/v3/routes",
+            ApiKey1 = "XXX",
+            ApiKey2 = "XXX"
+          });
+
     var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
     var tripUpdatesJson = File.ReadAllText("AT/trip_updates.json");
     var routesJson = File.ReadAllText("AT/routes.json");
@@ -143,7 +156,8 @@ public class AtAPIServiceTests
         .Protected()
         .Setup<Task<HttpResponseMessage>>(
             "SendAsync",
-            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() == "https://api.at.govt.nz/realtime/legacy/tripupdates"),
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+                $"{_mockAtConfig.Object.Value.BaseUrl}{_mockAtConfig.Object.Value.TripUpdatesEndpoint}"),
             ItExpr.IsAny<CancellationToken>()
         )
         .ReturnsAsync(new HttpResponseMessage
@@ -156,7 +170,8 @@ public class AtAPIServiceTests
         .Protected()
         .Setup<Task<HttpResponseMessage>>(
             "SendAsync",
-            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() == "https://api.at.govt.nz/realtime/legacy/servicealerts"),
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+                $"{_mockAtConfig.Object.Value.BaseUrl}{_mockAtConfig.Object.Value.ServiceAlertsEndpoint}"),
             ItExpr.IsAny<CancellationToken>()
         )
         .ReturnsAsync(new HttpResponseMessage
@@ -169,7 +184,8 @@ public class AtAPIServiceTests
         .Protected()
         .Setup<Task<HttpResponseMessage>>(
             "SendAsync",
-            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() == "https://api.at.govt.nz/realtime/legacy/vehiclelocations"),
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+                $"{_mockAtConfig.Object.Value.BaseUrl}{_mockAtConfig.Object.Value.VehicleLocationsEndpoint}"),
             ItExpr.IsAny<CancellationToken>()
         )
         .ReturnsAsync(new HttpResponseMessage
@@ -182,7 +198,8 @@ public class AtAPIServiceTests
         .Protected()
         .Setup<Task<HttpResponseMessage>>(
             "SendAsync",
-            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() == "https://api.at.govt.nz/gtfs/v3/routes"),
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+                $"{_mockAtConfig.Object.Value.BaseUrl}{_mockAtConfig.Object.Value.RoutesEndpoint}"),
             ItExpr.IsAny<CancellationToken>()
         )
         .ReturnsAsync(new HttpResponseMessage
@@ -193,8 +210,6 @@ public class AtAPIServiceTests
 
     var client = new HttpClient(mockHttpMessageHandler.Object);
     _mockHttpClientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
-
-    return mockHttpMessageHandler;
   }
 
 }

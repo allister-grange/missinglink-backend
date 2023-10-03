@@ -17,15 +17,14 @@ namespace missinglink.Services
   public class MetlinkAPIService : IBaseServiceAPI
   {
     private readonly HttpClient _httpClient;
-    private readonly IConfiguration _configuration;
     private readonly ILogger<MetlinkAPIService> _logger;
     private readonly IServiceRepository _serviceRepository;
     private readonly MetlinkApiConfig _apiConfig;
 
-    public MetlinkAPIService(ILogger<MetlinkAPIService> logger, IHttpClientFactory clientFactory, IOptions<MetlinkApiConfig> apiConfig, IConfiguration configuration, IServiceRepository metlinkServiceRepository)
+    public MetlinkAPIService(ILogger<MetlinkAPIService> logger, IHttpClientFactory clientFactory,
+      IOptions<MetlinkApiConfig> apiConfig, IServiceRepository metlinkServiceRepository)
     {
       _httpClient = clientFactory.CreateClient("metlinkService");
-      _configuration = configuration;
       _logger = logger;
       _apiConfig = apiConfig.Value;
       _serviceRepository = metlinkServiceRepository;
@@ -282,7 +281,7 @@ namespace missinglink.Services
         var request = new HttpRequestMessage(
           HttpMethod.Get, url);
         request.Headers.Add("Accept", "application/json");
-        request.Headers.Add("x-api-key", _configuration.GetConnectionString("MetlinkAPIKey"));
+        request.Headers.Add("x-api-key", _apiConfig.ApiKey);
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
