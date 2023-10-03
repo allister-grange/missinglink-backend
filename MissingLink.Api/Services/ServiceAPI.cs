@@ -20,7 +20,7 @@ namespace missinglink.Services
       PropertyNameCaseInsensitive = true
     };
 
-    public ServiceAPI(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository serviceRepository)
+    public ServiceAPI(ILogger<AtAPIService> logger, IServiceRepository serviceRepository)
     {
       _logger = logger;
       _serviceRepository = serviceRepository;

@@ -1,3 +1,4 @@
+using Autofac;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Connections;
@@ -6,8 +7,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using missinglink.Contexts;
+using missinglink.Controllers;
 using missinglink.Repository;
 using missinglink.Services;
 using missinglink.Utils;
@@ -16,12 +19,17 @@ namespace missinglink
 {
   public class Startup
   {
-    public Startup(IConfiguration configuration)
+    public Startup(IWebHostEnvironment env)
     {
-      Configuration = configuration;
+      // Configuration = configuration;
+      var builder = new ConfigurationBuilder()
+    .SetBasePath(env.ContentRootPath)
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
+      Configuration = builder.Build();
     }
 
-    public IConfiguration Configuration { get; }
+    public IConfigurationRoot Configuration { get; private set; }
 
     public void ConfigureServices(IServiceCollection services)
     {
@@ -41,14 +49,23 @@ namespace missinglink
       services.AddScoped<IServiceRepository, ServiceRepository>();
       services.AddScoped<IDateTimeProvider, DefaultDateTimeProvider>();
 
-      services.AddScoped<IBaseServiceAPI, MetlinkAPIService>();
-      services.AddScoped<IBaseServiceAPI, AtAPIService>();
       services.AddScoped<IServiceAPI, ServiceAPI>();
 
-      services.AddControllers();
+      services.AddControllers().AddControllersAsServices();
 
       services.AddSingleton<MetlinkServiceHub>();
       services.AddSignalR();
+    }
+
+    public void ConfigureContainer(ContainerBuilder builder)
+    {
+      builder.RegisterType<MetlinkAPIService>();
+      builder.RegisterType<AtAPIService>();
+      builder.RegisterType<ServiceAPI>();
+
+      builder.Register(c => new AtServicesController(c.Resolve<ILogger<AtServicesController>>(), c.Resolve<AtAPIService>())).InstancePerLifetimeScope();
+      builder.Register(c => new MetlinkServicesController(c.Resolve<ILogger<MetlinkServicesController>>(), c.Resolve<MetlinkAPIService>())).InstancePerLifetimeScope();
+      builder.RegisterType<UpdateServicesController>().InstancePerLifetimeScope();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -82,8 +99,6 @@ namespace missinglink
       }
 
       app.UseRouting();
-
-      app.UseAuthorization();
 
       app.UseEndpoints(endpoints =>
       {

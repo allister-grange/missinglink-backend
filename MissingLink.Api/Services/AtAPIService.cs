@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using missinglink.Models;
 using missinglink.Utils;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using missinglink.Repository;
 using missinglink.Models.AT;
@@ -18,7 +17,6 @@ namespace missinglink.Services
   public class AtAPIService : IBaseServiceAPI
   {
     private readonly HttpClient _httpClient;
-    private readonly IConfiguration _configuration;
     private readonly ILogger<AtAPIService> _logger;
     private readonly IServiceRepository _serviceRepository;
     private readonly IDateTimeProvider _dateTimeProvider;

@@ -62,7 +62,7 @@ public class AtAPIServiceTests
     Assert.Equal("UNKNOWN", service.Status);
     Assert.Equal("51100306140-20230927142708_v106.28", service.TripId);
     Assert.Equal("59593", service.VehicleId);
-    Assert.Equal("Train", service.VehicleType);
+    Assert.Equal("TRAIN", service.VehicleType);
   }
 
   // Test that a vehicle for tomorrows date (in this case, 30/09/2023) is not included in the services

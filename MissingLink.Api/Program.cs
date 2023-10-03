@@ -1,3 +1,5 @@
+using Autofac.Extensions.DependencyInjection;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
@@ -7,15 +9,13 @@ namespace missinglink
   {
     public static void Main(string[] args)
     {
-      CreateHostBuilder(args).Build().Run();
-    }
+      var host = WebHost.CreateDefaultBuilder(args)
+        .ConfigureServices(services => services.AddAutofac())
+        .UseStartup<Startup>()
+        .UseUrls("http://localhost:5002", "https://localhost:5001")
+        .Build();
 
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(webBuilder =>
-            {
-              webBuilder.UseStartup<Startup>();
-              webBuilder.UseUrls("http://localhost:5002", "https://localhost:5001");
-            });
+      host.Run();
+    }
   }
 }
