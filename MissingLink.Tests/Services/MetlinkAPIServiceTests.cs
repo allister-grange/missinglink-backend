@@ -9,21 +9,23 @@ using Microsoft.Extensions.Configuration;
 using Moq.Protected;
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.Options;
 
 public class MetlinkAPIServiceTests
 {
   private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
   private readonly Mock<IConfiguration> _mockConfiguration;
+  private Mock<IOptions<MetlinkApiConfig>> _mockMetlinkConfig;
   private readonly Mock<ILogger<MetlinkAPIService>> _mockLogger;
   private readonly Mock<IServiceRepository> _mockServiceRepository;
-
   public MetlinkAPIServiceTests()
   {
     _mockHttpClientFactory = new Mock<IHttpClientFactory>();
     _mockConfiguration = new Mock<IConfiguration>();
     _mockLogger = new Mock<ILogger<MetlinkAPIService>>();
     _mockServiceRepository = new Mock<IServiceRepository>();
-    CreateMockHandler();
+    _mockMetlinkConfig = new Mock<IOptions<MetlinkApiConfig>>();
+    PrepareMocks();
   }
 
   // Test that the first vehicle in the example JSON looks okay
@@ -31,7 +33,7 @@ public class MetlinkAPIServiceTests
   public async Task FetchLatestTripDataFromUpstreamService_ReturnsExpectedResultForFirstEntry()
   {
     // Arrange
-    var metlinkApiService = new MetlinkAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object);
+    var metlinkApiService = new MetlinkAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockMetlinkConfig.Object, _mockConfiguration.Object, _mockServiceRepository.Object);
 
     // Act
     var services = await metlinkApiService.FetchLatestTripDataFromUpstreamService();
@@ -60,12 +62,13 @@ public class MetlinkAPIServiceTests
     Assert.Equal("3316", service.VehicleId);
     Assert.Equal("BUS", service.VehicleType);
   }
+
   // Test that the correct amount of each status is returned
   [Fact]
   public async Task FetchLatestTripDataFromUpstreamService_ReturnsCorrectStatusCount()
   {
     // Arrange
-    var metlinkApiService = new MetlinkAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockConfiguration.Object, _mockServiceRepository.Object);
+    var metlinkApiService = new MetlinkAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockMetlinkConfig.Object, _mockConfiguration.Object, _mockServiceRepository.Object);
 
     // Act
     var services = await metlinkApiService.FetchLatestTripDataFromUpstreamService();
@@ -83,9 +86,19 @@ public class MetlinkAPIServiceTests
     Assert.Equal(12, services.Where(service => service.Status == "UNKNOWN").Count());
   }
 
-
-  private Mock<HttpMessageHandler> CreateMockHandler()
+  private void PrepareMocks()
   {
+    _mockMetlinkConfig.Setup(config => config.Value)
+              .Returns(new MetlinkApiConfig
+              {
+                BaseUrl = "https://api.opendata.metlink.org.nz",
+                TripUpdatesEndpoint = "/v1/gtfs-rt/tripupdates",
+                TripsEndpoint = "/v1/gtfs/trips",
+                RoutesEndpoint = "/v1/gtfs/routes",
+                VehiclePositionsEndpoint = "/v1/gtfs-rt/vehiclepositions",
+                TripCancellationsEndpoint = "/v1/trip-cancellations"
+              });
+
     var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
     var tripUpdatesJson = File.ReadAllText("metlink/trip_updates.json");
     var routesJson = File.ReadAllText("metlink/routes.json");
@@ -97,7 +110,7 @@ public class MetlinkAPIServiceTests
         .Protected()
         .Setup<Task<HttpResponseMessage>>(
             "SendAsync",
-            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() == "https://api.opendata.metlink.org.nz/v1/gtfs-rt/tripupdates"),
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() == $"{_mockMetlinkConfig.Object.Value.BaseUrl}{_mockMetlinkConfig.Object.Value.TripUpdatesEndpoint}"),
             ItExpr.IsAny<CancellationToken>()
         )
         .ReturnsAsync(new HttpResponseMessage
@@ -112,7 +125,7 @@ public class MetlinkAPIServiceTests
             "SendAsync",
             ItExpr.Is<HttpRequestMessage>(request =>
             request.Method == HttpMethod.Get &&
-            request.RequestUri!.GetLeftPart(UriPartial.Path) == "https://api.opendata.metlink.org.nz/v1/trip-cancellations"),
+            request.RequestUri!.GetLeftPart(UriPartial.Path) == $"{_mockMetlinkConfig.Object.Value.BaseUrl}{_mockMetlinkConfig.Object.Value.TripCancellationsEndpoint}"),
             ItExpr.IsAny<CancellationToken>()
         )
         .ReturnsAsync(new HttpResponseMessage
@@ -125,7 +138,7 @@ public class MetlinkAPIServiceTests
         .Protected()
         .Setup<Task<HttpResponseMessage>>(
             "SendAsync",
-            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() == "https://api.opendata.metlink.org.nz/v1/gtfs-rt/vehiclepositions"),
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() == $"{_mockMetlinkConfig.Object.Value.BaseUrl}{_mockMetlinkConfig.Object.Value.VehiclePositionsEndpoint}"),
             ItExpr.IsAny<CancellationToken>()
         )
         .ReturnsAsync(new HttpResponseMessage
@@ -140,7 +153,7 @@ public class MetlinkAPIServiceTests
             "SendAsync",
             ItExpr.Is<HttpRequestMessage>(request =>
             request.Method == HttpMethod.Get &&
-            request.RequestUri!.GetLeftPart(UriPartial.Path) == "https://api.opendata.metlink.org.nz/v1/gtfs/trips"),
+            request.RequestUri!.GetLeftPart(UriPartial.Path) == $"{_mockMetlinkConfig.Object.Value.BaseUrl}{_mockMetlinkConfig.Object.Value.TripsEndpoint}"),
             ItExpr.IsAny<CancellationToken>()
         )
         .ReturnsAsync(new HttpResponseMessage
@@ -153,7 +166,7 @@ public class MetlinkAPIServiceTests
         .Protected()
         .Setup<Task<HttpResponseMessage>>(
             "SendAsync",
-            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() == "https://api.opendata.metlink.org.nz/v1/gtfs/routes"),
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() == $"{_mockMetlinkConfig.Object.Value.BaseUrl}{_mockMetlinkConfig.Object.Value.RoutesEndpoint}"),
             ItExpr.IsAny<CancellationToken>()
         )
         .ReturnsAsync(new HttpResponseMessage
@@ -164,8 +177,5 @@ public class MetlinkAPIServiceTests
 
     var client = new HttpClient(mockHttpMessageHandler.Object);
     _mockHttpClientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
-
-    return mockHttpMessageHandler;
   }
-
 }

@@ -46,7 +46,6 @@ namespace missinglink.Services
         metlinkApiKey = "AtAPIKey2";
       }
     }
-
     public async Task<List<Service>> FetchLatestTripDataFromUpstreamService()
     {
       try
@@ -111,7 +110,6 @@ namespace missinglink.Services
         throw;
       }
     }
-
     private async Task<List<TResponseEntity>> FetchDataFromATApi<TResponse, TResponseEntity>(string apiUrl, Func<TResponse, List<TResponseEntity>> entitySelector)
     {
       try
@@ -134,7 +132,6 @@ namespace missinglink.Services
         throw;
       }
     }
-
 
     private List<Service> ParseATResponsesIntoServices(List<Entity> tripUpdates,
       List<PositionResponseEntity> positions, List<Datum> routes)

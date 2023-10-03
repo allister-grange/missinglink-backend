@@ -32,6 +32,9 @@ namespace missinglink
         c.SwaggerDoc("v1", new OpenApiInfo { Title = "missinglink", Version = "v1" });
       });
 
+      services.Configure<MetlinkApiConfig>(Configuration.GetSection("MetlinkApiConfig"));
+
+
       services.AddDbContext<ServiceContext>(options =>
         options.UseNpgsql(Configuration.GetConnectionString("Postgres")));
 

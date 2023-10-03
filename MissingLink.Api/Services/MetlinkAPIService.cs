@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
 using missinglink.Repository;
 using missinglink.Models;
+using Microsoft.Extensions.Options;
 
 namespace missinglink.Services
 {
@@ -19,12 +20,14 @@ namespace missinglink.Services
     private readonly IConfiguration _configuration;
     private readonly ILogger<MetlinkAPIService> _logger;
     private readonly IServiceRepository _serviceRepository;
+    private readonly MetlinkApiConfig _apiConfig;
 
-    public MetlinkAPIService(ILogger<MetlinkAPIService> logger, IHttpClientFactory clientFactory, IConfiguration configuration, IServiceRepository metlinkServiceRepository)
+    public MetlinkAPIService(ILogger<MetlinkAPIService> logger, IHttpClientFactory clientFactory, IOptions<MetlinkApiConfig> apiConfig, IConfiguration configuration, IServiceRepository metlinkServiceRepository)
     {
       _httpClient = clientFactory.CreateClient("metlinkService");
       _configuration = configuration;
       _logger = logger;
+      _apiConfig = apiConfig.Value;
       _serviceRepository = metlinkServiceRepository;
     }
 
@@ -35,22 +38,22 @@ namespace missinglink.Services
         var cancelledServicesTask = GetCancelledServicesFromMetlink();
 
         var tripUpdatesTask = FetchDataFromMetlinkApi(
-          "https://api.opendata.metlink.org.nz/v1/gtfs-rt/tripupdates",
+          $"{_apiConfig.BaseUrl}{_apiConfig.TripUpdatesEndpoint}",
           () => new MetlinkTripUpdatesResponse()
         );
 
         var tripsTask = FetchDataFromMetlinkApi(
-          "https://api.opendata.metlink.org.nz/v1/gtfs/trips",
+          $"{_apiConfig.BaseUrl}{_apiConfig.TripsEndpoint}",
           () => new List<MetlinkTripResponse>()
         );
 
         var routesTask = FetchDataFromMetlinkApi(
-          "https://api.opendata.metlink.org.nz/v1/gtfs/routes",
+          $"{_apiConfig.BaseUrl}{_apiConfig.RoutesEndpoint}",
           () => new List<RouteResponse>()
         );
 
         var positionsTask = FetchDataFromMetlinkApi(
-          "https://api.opendata.metlink.org.nz/v1/gtfs-rt/vehiclepositions",
+          $"{_apiConfig.BaseUrl}{_apiConfig.VehiclePositionsEndpoint}",
           () => new VehiclePositionResponse()
         );
 
@@ -64,8 +67,7 @@ namespace missinglink.Services
 
         var allServices = ParseServicesFromTripUpdates(tripUpdates);
 
-        // todo this is bad practise (not cloning the array)
-        UpdateServicesWithRoutesAndPositions(allServices, trips, routes, positions);
+        allServices = MergeServicesWithRoutesAndPositions(allServices, trips, routes, positions);
 
         var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancelledServices, routes);
 
@@ -159,8 +161,10 @@ namespace missinglink.Services
       return allServices;
     }
 
-    private void UpdateServicesWithRoutesAndPositions(List<Service> services, List<MetlinkTripResponse> trips, List<RouteResponse> routes, List<VehiclePositionHolder> positions)
+    private List<Service> MergeServicesWithRoutesAndPositions(List<Service> services, List<MetlinkTripResponse> trips, List<RouteResponse> routes, List<VehiclePositionHolder> positions)
     {
+      var updatedServices = new List<Service>(services);
+
       foreach (var service in services)
       {
         var tripThatServiceIsOn = trips.Find(trip => trip.TripId == service.TripId);
@@ -190,6 +194,8 @@ namespace missinglink.Services
           _logger.LogError($"Position for service {service.VehicleId} is null");
         }
       }
+
+      return updatedServices;
     }
 
     private async Task<List<MetlinkCancellationResponse>> GetCancelledServicesFromMetlink()
