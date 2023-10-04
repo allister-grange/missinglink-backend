@@ -22,9 +22,6 @@ namespace missinglink.Services
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly AtApiConfig _atApiConfig;
 
-    // I bounce between two AT API keys to remain under the quota
-    private string metlinkApiKey;
-
     public AtAPIService(ILogger<AtAPIService> logger, IHttpClientFactory clientFactory,
                         IOptions<AtApiConfig> atApiConfigOptions, IServiceRepository serviceRepository,
                         IDateTimeProvider dateTimeProvider)
@@ -34,83 +31,65 @@ namespace missinglink.Services
       _serviceRepository = serviceRepository;
       _dateTimeProvider = dateTimeProvider;
       _atApiConfig = atApiConfigOptions.Value;
-
-      Random random = new Random();
-      int randomNumber = random.Next(2); // Generates a random number between 0 and 1
-
-      if (randomNumber == 0)
-      {
-        metlinkApiKey = "AtAPIKey1";
-      }
-      else
-      {
-        metlinkApiKey = "AtAPIKey2";
-      }
     }
     public async Task<List<Service>> FetchLatestTripDataFromUpstreamService()
     {
-      try
-      {
-        // Get all the trips 
-        var tripUpdatesTask = FetchDataFromATApi<AtTripUpdatesResponse, Entity>(
-          $"{_atApiConfig.BaseUrl}{_atApiConfig.TripUpdatesEndpoint}",
+      // Get all the trips 
+      var tripUpdatesTask = FetchDataFromATApi<AtTripUpdatesResponse, Entity>(
+        $"{_atApiConfig.BaseUrl}{_atApiConfig.TripUpdatesEndpoint}",
+        res => res.Response.Entity
+      );
+
+      var cancelledTask = FetchDataFromATApi<AtServiceAlert, ServiceAlertEntity>(
+          $"{_atApiConfig.BaseUrl}{_atApiConfig.ServiceAlertsEndpoint}",
           res => res.Response.Entity
-        );
+      );
 
-        var cancelledTask = FetchDataFromATApi<AtServiceAlert, ServiceAlertEntity>(
-            $"{_atApiConfig.BaseUrl}{_atApiConfig.ServiceAlertsEndpoint}",
-            res => res.Response.Entity
-        );
+      var positionsTask = FetchDataFromATApi<AtVehiclePositionResponse, PositionResponseEntity>(
+          $"{_atApiConfig.BaseUrl}{_atApiConfig.VehicleLocationsEndpoint}",
+          res => res.Response.Entity
+      );
 
-        var positionsTask = FetchDataFromATApi<AtVehiclePositionResponse, PositionResponseEntity>(
-            $"{_atApiConfig.BaseUrl}{_atApiConfig.VehicleLocationsEndpoint}",
-            res => res.Response.Entity
-        );
+      var routesTask = FetchDataFromATApi<AtRouteResponse, Datum>(
+          $"{_atApiConfig.BaseUrl}{_atApiConfig.RoutesEndpoint}",
+          res => res.Data
+      );
 
-        var routesTask = FetchDataFromATApi<AtRouteResponse, Datum>(
-            $"{_atApiConfig.BaseUrl}{_atApiConfig.RoutesEndpoint}",
-            res => res.Data
-        );
+      await Task.WhenAll(tripUpdatesTask, cancelledTask, positionsTask, routesTask);
 
-        await Task.WhenAll(tripUpdatesTask, cancelledTask, positionsTask, routesTask);
+      var tripUpdates = tripUpdatesTask.Result;
+      var positions = positionsTask.Result;
+      var routes = routesTask.Result;
+      var cancellations = cancelledTask.Result;
 
-        var tripUpdates = tripUpdatesTask.Result;
-        var positions = positionsTask.Result;
-        var routes = routesTask.Result;
-        var cancellations = cancelledTask.Result;
+      tripUpdates.RemoveAll(trip => trip.TripUpdate == null);
 
-        tripUpdates.RemoveAll(trip => trip.TripUpdate == null);
+      var allServicesParsed = ParseATResponsesIntoServices(tripUpdates, positions, routes);
 
-        var allServicesParsed = ParseATResponsesIntoServices(tripUpdates, positions, routes);
+      // cancelled services are matched against the trip updates, so I'm only including 
+      // cancellations for current trips, not ones tomorrow etc
+      // this means I grab the cancellations, then I remove the trip updates so they're not 
+      // counted twice
+      var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancellations, routes, tripUpdates);
 
-        // cancelled services are matched against the trip updates, so I'm only including 
-        // cancellations for current trips, not ones tomorrow etc
-        // this means I grab the cancellations, then I remove the trip updates so they're not 
-        // counted twice
-        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancellations, routes, tripUpdates);
+      foreach (var cancellation in cancellations)
+      {
+        var tripUpdateId = cancellation.Alert.InformedEntity.FirstOrDefault(informedEntity => informedEntity.Trip?.TripId != null);
 
-        foreach (var cancellation in cancellations)
+        if (tripUpdateId == null)
         {
-          var tripUpdateId = cancellation.Alert.InformedEntity.FirstOrDefault(informedEntity => informedEntity.Trip?.TripId != null);
-
-          if (tripUpdateId == null)
-          {
-            continue;
-          }
-
-          tripUpdates.RemoveAll((trip) => trip.TripUpdate.Trip.TripId == tripUpdateId.Trip.TripId);
+          continue;
         }
 
-        allServicesParsed.AddRange(cancelledServicesToBeAdded);
+        tripUpdates.RemoveAll((trip) => trip.TripUpdate.Trip.TripId == tripUpdateId.Trip.TripId);
+      }
 
-        return allServicesParsed;
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "An error occurred while retrieving service updates for AT.");
-        throw;
-      }
+      allServicesParsed.AddRange(cancelledServicesToBeAdded);
+
+      return allServicesParsed;
     }
+
+
     private async Task<List<TResponseEntity>> FetchDataFromATApi<TResponse, TResponseEntity>(string apiUrl, Func<TResponse, List<TResponseEntity>> entitySelector)
     {
       try
@@ -128,9 +107,10 @@ namespace missinglink.Services
           return new List<TResponseEntity>();
         }
       }
-      catch
+      catch (Exception ex)
       {
-        throw;
+        _logger.LogError(ex, "An error occurred while fetching data from the AT api");
+        return new List<TResponseEntity>();
       }
     }
 
@@ -237,7 +217,7 @@ namespace missinglink.Services
 
         if (tripFoundInTripUpdates == null)
         {
-          Console.WriteLine("Found a cancellation with a tripID that isn't in the tripupdates for AT");
+          _logger.LogInformation("Found a cancellation with a tripID that isn't in the tripupdates for AT");
           continue;
         }
 
@@ -245,7 +225,7 @@ namespace missinglink.Services
 
         if (route == null)
         {
-          Console.WriteLine("Found a route with an that isn't in the tripupdates for AT");
+          _logger.LogInformation("Found a route with an that isn't in the tripupdates for AT");
           continue;
         }
 
@@ -291,15 +271,24 @@ namespace missinglink.Services
         var batchId = await _serviceRepository.GetLatestBatchId();
         return _serviceRepository.GetByBatchIdAndProvider(batchId, "AT");
       }
-      catch
+      catch (Exception ex)
       {
-        throw;
+        _logger.LogError(ex, "Failed to retrieve the latest services for AT");
+        return new List<Service>();
       }
     }
 
     public List<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
     {
-      return _serviceRepository.GetServiceStatisticsByDateAndProvider(startDate, endDate, "AT");
+      try
+      {
+        return _serviceRepository.GetServiceStatisticsByDateAndProvider(startDate, endDate, "AT");
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to retrieve the service statistics for AT");
+        return new List<ServiceStatistic>();
+      }
     }
 
     private async Task<HttpResponseMessage> MakeAPIRequest(string url)
@@ -307,29 +296,36 @@ namespace missinglink.Services
       // We want to bounce between 2 api keys to keep the usage down
       Random random = new Random();
       int randomNumber = random.Next(2);
-      metlinkApiKey = randomNumber == 0 ? _atApiConfig.ApiKey1 : _atApiConfig.ApiKey2;
+      var metlinkApiKey = randomNumber == 0 ? _atApiConfig.ApiKey1 : _atApiConfig.ApiKey2;
 
       var attempts = 5;
 
       while (attempts > 0)
       {
-        var request = new HttpRequestMessage(
-          HttpMethod.Get, url);
-        request.Headers.Add("Accept", "application/json");
-        request.Headers.Add("Ocp-Apim-Subscription-Key", metlinkApiKey);
-        var response = await _httpClient.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
+        try
         {
-          Console.WriteLine("Success calling " + url);
-          return response;
+          var request = new HttpRequestMessage(
+            HttpMethod.Get, url);
+          request.Headers.Add("Accept", "application/json");
+          request.Headers.Add("Ocp-Apim-Subscription-Key", metlinkApiKey);
+          var response = await _httpClient.SendAsync(request);
+
+          if (response.IsSuccessStatusCode)
+          {
+            _logger.LogInformation("Success calling " + url);
+            return response;
+          }
         }
-        Console.WriteLine("Failed calling " + url);
+        catch (HttpRequestException ex)
+        {
+          _logger.LogWarning(ex, $"Failed attempt {5 - attempts + 1} calling {url}.");
+        }
         attempts--;
       }
 
-      throw new Exception("Couldn't get a 200 from A's API");
+      _logger.LogError($"Failed all attempts to call {url}.");
+      throw new HttpRequestException($"Failed to retrieve data from AT API {url} after 5 attempts.");
     }
-
   }
+
 }

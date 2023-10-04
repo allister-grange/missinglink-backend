@@ -32,67 +32,59 @@ namespace missinglink.Services
 
     public async Task<List<Service>> FetchLatestTripDataFromUpstreamService()
     {
-      try
+      var cancelledServicesTask = GetCancelledServicesFromMetlink();
+
+      var tripUpdatesTask = FetchDataFromMetlinkApi(
+        $"{_apiConfig.BaseUrl}{_apiConfig.TripUpdatesEndpoint}",
+        () => new MetlinkTripUpdatesResponse()
+      );
+
+      var tripsTask = FetchDataFromMetlinkApi(
+        $"{_apiConfig.BaseUrl}{_apiConfig.TripsEndpoint}",
+        () => new List<MetlinkTripResponse>()
+      );
+
+      var routesTask = FetchDataFromMetlinkApi(
+        $"{_apiConfig.BaseUrl}{_apiConfig.RoutesEndpoint}",
+        () => new List<RouteResponse>()
+      );
+
+      var positionsTask = FetchDataFromMetlinkApi(
+        $"{_apiConfig.BaseUrl}{_apiConfig.VehiclePositionsEndpoint}",
+        () => new VehiclePositionResponse()
+      );
+
+      await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask, cancelledServicesTask);
+
+      var tripUpdates = tripUpdatesTask.Result.Trips;
+      var trips = tripsTask.Result;
+      var routes = routesTask.Result;
+      var positions = positionsTask.Result.VehiclePositions;
+      var cancelledServices = cancelledServicesTask.Result;
+
+      var allServices = ParseServicesFromTripUpdates(tripUpdates);
+
+      allServices = MergeServicesWithRoutesAndPositions(allServices, trips, routes, positions);
+
+      var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancelledServices, routes);
+
+      allServices.AddRange(cancelledServicesToBeAdded);
+
+      allServices.ForEach((service) =>
       {
-        var cancelledServicesTask = GetCancelledServicesFromMetlink();
-
-        var tripUpdatesTask = FetchDataFromMetlinkApi(
-          $"{_apiConfig.BaseUrl}{_apiConfig.TripUpdatesEndpoint}",
-          () => new MetlinkTripUpdatesResponse()
-        );
-
-        var tripsTask = FetchDataFromMetlinkApi(
-          $"{_apiConfig.BaseUrl}{_apiConfig.TripsEndpoint}",
-          () => new List<MetlinkTripResponse>()
-        );
-
-        var routesTask = FetchDataFromMetlinkApi(
-          $"{_apiConfig.BaseUrl}{_apiConfig.RoutesEndpoint}",
-          () => new List<RouteResponse>()
-        );
-
-        var positionsTask = FetchDataFromMetlinkApi(
-          $"{_apiConfig.BaseUrl}{_apiConfig.VehiclePositionsEndpoint}",
-          () => new VehiclePositionResponse()
-        );
-
-        await Task.WhenAll(tripUpdatesTask, tripsTask, routesTask, positionsTask, cancelledServicesTask);
-
-        var tripUpdates = tripUpdatesTask.Result.Trips;
-        var trips = tripsTask.Result;
-        var routes = routesTask.Result;
-        var positions = positionsTask.Result.VehiclePositions;
-        var cancelledServices = cancelledServicesTask.Result;
-
-        var allServices = ParseServicesFromTripUpdates(tripUpdates);
-
-        allServices = MergeServicesWithRoutesAndPositions(allServices, trips, routes, positions);
-
-        var cancelledServicesToBeAdded = GetCancelledServicesToBeAdded(cancelledServices, routes);
-
-        allServices.AddRange(cancelledServicesToBeAdded);
-
-        allServices.ForEach((service) =>
+        service.ProviderId = "Metlink";
+        service.ServiceName = service.RouteShortName;
+        if (int.TryParse(service.RouteShortName, out _))
         {
-          service.ProviderId = "Metlink";
-          service.ServiceName = service.RouteShortName;
-          if (int.TryParse(service.RouteShortName, out _))
-          {
-            service.VehicleType = "BUS";
-          }
-          else
-          {
-            service.VehicleType = "TRAIN";
-          }
-        });
+          service.VehicleType = "BUS";
+        }
+        else
+        {
+          service.VehicleType = "TRAIN";
+        }
+      });
 
-        return allServices;
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "An error occurred while retrieving service updates.");
-        throw;
-      }
+      return allServices;
     }
 
     private List<Service> GetCancelledServicesToBeAdded(List<MetlinkCancellationResponse> cancelledServices, List<RouteResponse> routes)
@@ -224,9 +216,10 @@ namespace missinglink.Services
 
         return res;
       }
-      catch
+      catch (Exception ex)
       {
-        throw;
+        _logger.LogError(ex, "Failed to retrieve the cancelled for Metlink");
+        return new List<MetlinkCancellationResponse>();
       }
     }
 
@@ -249,9 +242,10 @@ namespace missinglink.Services
 
         return result;
       }
-      catch
+      catch (Exception ex)
       {
-        throw;
+        _logger.LogError(ex, "An error occurred while fetching data from the AT api");
+        return defaultResultFactory();
       }
     }
 
@@ -262,9 +256,10 @@ namespace missinglink.Services
         var batchId = await _serviceRepository.GetLatestBatchId();
         return _serviceRepository.GetByBatchIdAndProvider(batchId, "Metlink");
       }
-      catch
+      catch (Exception ex)
       {
-        throw;
+        _logger.LogError(ex, "Failed to retrieve the latest services for Metlink");
+        return new List<Service>();
       }
     }
 
@@ -278,22 +273,31 @@ namespace missinglink.Services
       var attempts = 5;
       while (attempts > 0)
       {
-        var request = new HttpRequestMessage(
-          HttpMethod.Get, url);
-        request.Headers.Add("Accept", "application/json");
-        request.Headers.Add("x-api-key", _apiConfig.ApiKey);
-        var response = await _httpClient.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
+        try
         {
-          Console.WriteLine("Success calling " + url);
-          return response;
+
+          var request = new HttpRequestMessage(
+            HttpMethod.Get, url);
+          request.Headers.Add("Accept", "application/json");
+          request.Headers.Add("x-api-key", _apiConfig.ApiKey);
+          var response = await _httpClient.SendAsync(request);
+
+          if (response.IsSuccessStatusCode)
+          {
+            Console.WriteLine("Success calling " + url);
+            return response;
+          }
+          Console.WriteLine("Failed calling " + url);
+          attempts--;
         }
-        Console.WriteLine("Failed calling " + url);
-        attempts--;
+        catch (HttpRequestException ex)
+        {
+          _logger.LogWarning(ex, $"Failed attempt {5 - attempts + 1} calling {url}.");
+        }
       }
 
-      throw new Exception("Couldn't get a 200 from Metlink's API");
+      _logger.LogError($"Failed all attempts to call {url}.");
+      throw new HttpRequestException($"Failed to retrieve data from Metlink API {url} after 5 attempts.");
     }
 
   }
