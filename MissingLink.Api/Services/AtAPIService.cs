@@ -291,7 +291,7 @@ namespace missinglink.Services
       }
     }
 
-    public IEnumerable<Service> GetThreeWorstServicesForThisWeek()
+    public List<Service> GetThreeWorstServicesForThisWeek()
     {
       try
       {
