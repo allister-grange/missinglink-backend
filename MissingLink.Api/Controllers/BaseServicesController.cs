@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -67,5 +68,21 @@ public abstract class BaseServicesController<TService> : ControllerBase where TS
     }
 
     return Ok(stats);
+  }
+
+  [HttpGet("worstServices")]
+  public IEnumerable<dynamic> GetThreeWorstServicesForThisWeek()
+  {
+    _logger.LogInformation("Fetching three worst services for this week");
+    var services = _apiService.GetThreeWorstServicesForThisWeek();
+
+    if (services == null || services.Count() == 0)
+    {
+      _logger.LogWarning("Services table in database not populated.");
+      return new List<Service>();
+    }
+
+    _logger.LogInformation("Found " + services.Count() + " services");
+    return services;
   }
 }

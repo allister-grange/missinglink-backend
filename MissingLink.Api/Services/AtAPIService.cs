@@ -291,6 +291,19 @@ namespace missinglink.Services
       }
     }
 
+    public IEnumerable<Service> GetThreeWorstServicesForThisWeek()
+    {
+      try
+      {
+        return _serviceRepository.GetThreeWorstServicesForThisWeek("AT");
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to retrieve the service statistics for AT");
+        return new List<Service>();
+      }
+    }
+
     private async Task<HttpResponseMessage> MakeAPIRequest(string url)
     {
       // We want to bounce between 2 api keys to keep the usage down

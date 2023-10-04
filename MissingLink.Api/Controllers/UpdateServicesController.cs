@@ -31,6 +31,7 @@ namespace missinglink.Controllers
     {
       try
       {
+        _logger.LogInformation("Updating the services with the latest data");
         // generate a new batch ID for these services
         var newBatchId = await _serviceAPI.GenerateNewBatchId();
 
@@ -52,26 +53,13 @@ namespace missinglink.Controllers
         // update the statistics table with the new services
         await _serviceAPI.UpdateStatisticsWithLatestServices(allServices, newBatchId);
       }
-      catch (System.Exception e)
+      catch (Exception e)
       {
+        _logger.LogError(e, "Failed to update the services with the latest data");
         throw new Exception("Failed to update services: " + e);
       }
 
       return Ok();
-    }
-
-    [HttpGet("worstServices")]
-    public dynamic GetWorstServicesForPastWeek(string providerId)
-    {
-      try
-      {
-        var services = _serviceAPI.GetWorstServicesForPastWeek(providerId);
-        return services;
-      }
-      catch (System.Exception e)
-      {
-        throw new Exception("Failed to fetch worst services: " + e);
-      }
     }
   }
 }

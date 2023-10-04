@@ -101,10 +101,8 @@ namespace missinglink.Repository
       _dbContext.SaveChanges();
     }
 
-    public IEnumerable<dynamic> GetThreeWorstServicesForThisWeek(string providerId)
+    public List<Service> GetThreeWorstServicesForThisWeek(string providerId)
     {
-      // _dbContext.Services.RemoveRange(_dbContext.Services);
-      // _dbContext.SaveChanges();
       DateTime lastWeek = DateTime.Now.AddDays(-7);
 
       var query = (from ss in _dbContext.ServiceStatistics
@@ -112,14 +110,14 @@ namespace missinglink.Repository
                    where ss.Timestamp >= lastWeek && ss.ProviderId == providerId
                    group s by new { s.ServiceName, s.RouteLongName } into g
                    orderby g.Average(s => s.Delay) descending
-                   select new
+                   select new Service
                    {
                      ServiceName = g.Key.ServiceName,
                      RouteLongName = g.Key.RouteLongName,
-                     Delay = g.Average(s => s.Delay)
+                     Delay = (int)g.Average(s => s.Delay)
+
                    }).Take(3);
 
-      // Execute the query and retrieve the results
       return query.ToList();
     }
 

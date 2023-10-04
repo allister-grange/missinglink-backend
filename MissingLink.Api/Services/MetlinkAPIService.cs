@@ -263,6 +263,19 @@ namespace missinglink.Services
       }
     }
 
+    public IEnumerable<Service> GetThreeWorstServicesForThisWeek()
+    {
+      try
+      {
+        return _serviceRepository.GetThreeWorstServicesForThisWeek("Metlink");
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to retrieve the service statistics for Metlink");
+        return new List<Service>();
+      }
+    }
+
     public List<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate)
     {
       return _serviceRepository.GetServiceStatisticsByDateAndProvider(startDate, endDate, "Metlink");

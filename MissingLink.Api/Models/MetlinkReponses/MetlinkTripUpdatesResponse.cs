@@ -88,6 +88,11 @@ namespace missinglink.Models.Metlink
 
     [JsonProperty("entity")]
     public List<TripUpdateHolder> Trips { get; set; }
+
+    public MetlinkTripUpdatesResponse()
+    {
+      Trips = new List<TripUpdateHolder>();
+    }
   }
 
 }

@@ -132,6 +132,25 @@ public class AtAPIServiceTests
     Assert.Empty(duplicateVehicleIds);
   }
 
+  // Test that if AT returns an error on the API calls, that we continue without issue
+  [Fact]
+  public async Task FetchLatestTripDataFromUpstreamService_CanHandleUpstreamError()
+  {
+    // Arrange
+    PrepareHttpMockToFail();
+    var mockDateTimeProvider = new Mock<IDateTimeProvider>();
+    mockDateTimeProvider.Setup(dtp => dtp.UtcNow).Returns(new DateTime(2023, 9, 29, 22, 10, 00));
+    var atApiService = new AtAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockAtConfig.Object, _mockServiceRepository.Object, mockDateTimeProvider.Object);
+
+    // Act
+    var services = await atApiService.FetchLatestTripDataFromUpstreamService();
+
+    // Assert
+    Assert.NotNull(services);
+    Assert.IsType<List<Service>>(services);
+    Assert.Empty(services);
+  }
+
   private void PrepareMocks()
   {
     _mockAtConfig.Setup(config => config.Value)
@@ -210,6 +229,68 @@ public class AtAPIServiceTests
 
     var client = new HttpClient(mockHttpMessageHandler.Object);
     _mockHttpClientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+  }
+
+  private void PrepareHttpMockToFail()
+  {
+    var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+
+    mockHttpMessageHandler
+      .Protected()
+      .Setup<Task<HttpResponseMessage>>(
+          "SendAsync",
+          ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+              $"{_mockAtConfig.Object.Value.BaseUrl}{_mockAtConfig.Object.Value.TripUpdatesEndpoint}"),
+          ItExpr.IsAny<CancellationToken>()
+      )
+      .ReturnsAsync(new HttpResponseMessage
+      {
+        StatusCode = HttpStatusCode.InternalServerError,
+      });
+
+    mockHttpMessageHandler
+        .Protected()
+        .Setup<Task<HttpResponseMessage>>(
+            "SendAsync",
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+                $"{_mockAtConfig.Object.Value.BaseUrl}{_mockAtConfig.Object.Value.ServiceAlertsEndpoint}"),
+            ItExpr.IsAny<CancellationToken>()
+        )
+        .ReturnsAsync(new HttpResponseMessage
+        {
+          StatusCode = HttpStatusCode.InternalServerError,
+        });
+
+    mockHttpMessageHandler
+        .Protected()
+        .Setup<Task<HttpResponseMessage>>(
+            "SendAsync",
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+                $"{_mockAtConfig.Object.Value.BaseUrl}{_mockAtConfig.Object.Value.VehicleLocationsEndpoint}"),
+            ItExpr.IsAny<CancellationToken>()
+        )
+        .ReturnsAsync(new HttpResponseMessage
+        {
+          StatusCode = HttpStatusCode.InternalServerError,
+        });
+
+    mockHttpMessageHandler
+        .Protected()
+        .Setup<Task<HttpResponseMessage>>(
+            "SendAsync",
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+                $"{_mockAtConfig.Object.Value.BaseUrl}{_mockAtConfig.Object.Value.RoutesEndpoint}"),
+            ItExpr.IsAny<CancellationToken>()
+        )
+        .ReturnsAsync(new HttpResponseMessage
+        {
+          StatusCode = HttpStatusCode.InternalServerError,
+        });
+
+
+    var client = new HttpClient(mockHttpMessageHandler.Object);
+    _mockHttpClientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+
   }
 
 }

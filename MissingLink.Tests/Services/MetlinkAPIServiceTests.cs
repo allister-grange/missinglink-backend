@@ -83,6 +83,23 @@ public class MetlinkAPIServiceTests
     Assert.Equal(12, services.Where(service => service.Status == "UNKNOWN").Count());
   }
 
+  // Test that if Metlink returns an error on the API calls, that we continue without issue
+  [Fact]
+  public async Task FetchLatestTripDataFromUpstreamService_CanHandleUpstreamError()
+  {
+    // Arrange
+    PrepareHttpMockToFail();
+    var metlinkApiService = new MetlinkAPIService(_mockLogger.Object, _mockHttpClientFactory.Object, _mockMetlinkConfig.Object, _mockServiceRepository.Object);
+
+    // Act
+    var services = await metlinkApiService.FetchLatestTripDataFromUpstreamService();
+
+    // Assert
+    Assert.NotNull(services);
+    Assert.IsType<List<Service>>(services);
+    Assert.Empty(services);
+  }
+
   private void PrepareMocks()
   {
     _mockMetlinkConfig.Setup(config => config.Value)
@@ -175,6 +192,83 @@ public class MetlinkAPIServiceTests
         {
           StatusCode = HttpStatusCode.OK,
           Content = new StringContent(routesJson, Encoding.UTF8, "application/json"),
+        });
+
+    var client = new HttpClient(mockHttpMessageHandler.Object);
+    _mockHttpClientFactory.Setup(_ => _.CreateClient(It.IsAny<string>())).Returns(client);
+  }
+
+  public void PrepareHttpMockToFail()
+  {
+    var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+
+    mockHttpMessageHandler
+        .Protected()
+        .Setup<Task<HttpResponseMessage>>(
+            "SendAsync",
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+                $"{_mockMetlinkConfig.Object.Value.BaseUrl}{_mockMetlinkConfig.Object.Value.TripUpdatesEndpoint}"),
+            ItExpr.IsAny<CancellationToken>()
+        )
+        .ReturnsAsync(new HttpResponseMessage
+        {
+          StatusCode = HttpStatusCode.InternalServerError,
+        });
+
+    mockHttpMessageHandler
+        .Protected()
+        .Setup<Task<HttpResponseMessage>>(
+            "SendAsync",
+            ItExpr.Is<HttpRequestMessage>(request =>
+            request.Method == HttpMethod.Get &&
+            request.RequestUri!.GetLeftPart(UriPartial.Path) ==
+                $"{_mockMetlinkConfig.Object.Value.BaseUrl}{_mockMetlinkConfig.Object.Value.TripCancellationsEndpoint}"),
+            ItExpr.IsAny<CancellationToken>()
+        )
+        .ReturnsAsync(new HttpResponseMessage
+        {
+          StatusCode = HttpStatusCode.InternalServerError,
+        });
+
+    mockHttpMessageHandler
+        .Protected()
+        .Setup<Task<HttpResponseMessage>>(
+            "SendAsync",
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+                $"{_mockMetlinkConfig.Object.Value.BaseUrl}{_mockMetlinkConfig.Object.Value.VehiclePositionsEndpoint}"),
+            ItExpr.IsAny<CancellationToken>()
+        )
+        .ReturnsAsync(new HttpResponseMessage
+        {
+          StatusCode = HttpStatusCode.InternalServerError,
+        });
+
+    mockHttpMessageHandler
+        .Protected()
+        .Setup<Task<HttpResponseMessage>>(
+            "SendAsync",
+            ItExpr.Is<HttpRequestMessage>(request =>
+            request.Method == HttpMethod.Get &&
+            request.RequestUri!.GetLeftPart(UriPartial.Path) ==
+                $"{_mockMetlinkConfig.Object.Value.BaseUrl}{_mockMetlinkConfig.Object.Value.TripsEndpoint}"),
+            ItExpr.IsAny<CancellationToken>()
+        )
+        .ReturnsAsync(new HttpResponseMessage
+        {
+          StatusCode = HttpStatusCode.InternalServerError,
+        });
+
+    mockHttpMessageHandler
+        .Protected()
+        .Setup<Task<HttpResponseMessage>>(
+            "SendAsync",
+            ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString() ==
+                $"{_mockMetlinkConfig.Object.Value.BaseUrl}{_mockMetlinkConfig.Object.Value.RoutesEndpoint}"),
+            ItExpr.IsAny<CancellationToken>()
+        )
+        .ReturnsAsync(new HttpResponseMessage
+        {
+          StatusCode = HttpStatusCode.InternalServerError,
         });
 
     var client = new HttpClient(mockHttpMessageHandler.Object);

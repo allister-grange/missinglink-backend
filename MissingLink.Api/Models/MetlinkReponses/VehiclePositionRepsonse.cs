@@ -89,6 +89,11 @@ namespace missinglink.Models.Metlink.VehiclePosition
 
     [JsonProperty("entity")]
     public List<VehiclePositionHolder> VehiclePositions { get; set; }
+
+    public VehiclePositionResponse()
+    {
+      VehiclePositions = new List<VehiclePositionHolder>();
+    }
   }
 
 }

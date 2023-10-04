@@ -9,7 +9,7 @@ namespace missinglink.Services
     Task<int> GenerateNewBatchId();
     void DeleteAllServices();
     Task UpdateServicesWithLatestData(List<Service> allServices);
-    IEnumerable<dynamic> GetWorstServicesForPastWeek(string providerId);
+    List<Service> GetWorstServicesForPastWeek(string providerId);
     Task UpdateStatisticsWithLatestServices(List<Service> allServices, int newBatchId);
   }
 }

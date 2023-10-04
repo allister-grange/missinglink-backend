@@ -51,7 +51,7 @@ namespace missinglink.Services
       }
     }
 
-    public IEnumerable<dynamic> GetWorstServicesForPastWeek(string providerId)
+    public List<Service> GetWorstServicesForPastWeek(string providerId)
     {
       try
       {

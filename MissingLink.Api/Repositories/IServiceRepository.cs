@@ -20,6 +20,6 @@ namespace missinglink.Repository
     Task<int> GetLatestBatchId();
     List<Service> GetByBatchId(int batchId);
     List<Service> GetByBatchIdAndProvider(int batchId, string serviceProviderId);
-    IEnumerable<dynamic> GetThreeWorstServicesForThisWeek(string providerId);
+    List<Service> GetThreeWorstServicesForThisWeek(string providerId);
   }
 }

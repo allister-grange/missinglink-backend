@@ -10,5 +10,6 @@ namespace missinglink.Services
     Task<List<Service>> FetchLatestTripDataFromUpstreamService();
     Task<List<Service>> GetLatestServices();
     List<ServiceStatistic> GetServiceStatisticsByDate(DateTime startDate, DateTime endDate);
+    List<Service> GetThreeWorstServicesForThisWeek();
   }
 }
